@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { PageHero } from "@/components/PageHero";
 import { CtaBand } from "@/components/CtaBand";
-import { posts, formatDate } from "@/lib/posts";
+import { formatDate } from "@/lib/posts";
+import { getPosts } from "@/lib/repo/posts";
 import { getLocale } from "@/lib/i18n-server";
 import { t } from "@/lib/i18n";
 
@@ -22,6 +23,7 @@ const topics = [
 export default async function KnowledgeBasePage() {
   const locale = await getLocale();
   const tr = (s: string) => t(s, locale);
+  const posts = await getPosts("blog");
   return (
     <>
       <PageHero

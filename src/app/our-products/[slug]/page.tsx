@@ -2,13 +2,14 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { PageHero } from "@/components/PageHero";
 import { CtaBand } from "@/components/CtaBand";
-import { products, getProduct } from "@/lib/products";
+import { getProduct, getProducts } from "@/lib/repo/products";
 import { getLocale } from "@/lib/i18n-server";
 import { t, loc } from "@/lib/i18n";
 import { pageMeta } from "@/lib/meta";
 
 // CrowdIQ has its own dedicated route; the rest render from this template.
-export function generateStaticParams() {
+export async function generateStaticParams() {
+  const products = await getProducts();
   return products.filter((p) => p.slug !== "crowdiq").map((p) => ({ slug: p.slug }));
 }
 
@@ -18,14 +19,14 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const p = getProduct(slug);
+  const p = await getProduct(slug);
   if (!p) return {};
   return pageMeta({ title: `${p.title}: ${p.tagline}`, description: p.summary, path: `/our-products/${slug}` });
 }
 
 export default async function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const base = getProduct(slug);
+  const base = await getProduct(slug);
   if (!base) notFound();
   const locale = await getLocale();
   const p = loc(base, locale, "products", slug);

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { PageHero } from "@/components/PageHero";
 import { CtaBand } from "@/components/CtaBand";
 import { Icon } from "@/components/icons";
-import { pillars, servicesByPillar } from "@/lib/services";
+import { getPillars, getServices } from "@/lib/repo/services";
 import { getLocale } from "@/lib/i18n-server";
 import { t, loc } from "@/lib/i18n";
 import { pageMeta } from "@/lib/meta";
@@ -18,6 +18,9 @@ export const metadata: Metadata = pageMeta({
 export default async function WhatWeDoPage() {
   const locale = await getLocale();
   const tr = (s: string) => t(s, locale);
+  const pillars = await getPillars();
+  const services = await getServices();
+  const servicesByPillar = (key: string) => services.filter((s) => s.pillar === key);
   return (
     <>
       <PageHero

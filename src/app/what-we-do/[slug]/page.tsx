@@ -3,12 +3,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageHero } from "@/components/PageHero";
 import { CtaBand } from "@/components/CtaBand";
-import { services, getService, getPillar, servicesByPillar } from "@/lib/services";
+import { getPillar, getService, getServices, getServicesByPillar } from "@/lib/repo/services";
 import { getLocale } from "@/lib/i18n-server";
 import { t, loc } from "@/lib/i18n";
 import { pageMeta } from "@/lib/meta";
 
-export function generateStaticParams() {
+export async function generateStaticParams() {
+  const services = await getServices();
   return services.map((s) => ({ slug: s.slug }));
 }
 
@@ -18,20 +19,20 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const s = getService(slug);
+  const s = await getService(slug);
   if (!s) return {};
   return pageMeta({ title: s.title, description: s.blurb, path: `/what-we-do/${slug}` });
 }
 
 export default async function ServicePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const base = getService(slug);
+  const base = await getService(slug);
   if (!base) notFound();
   const locale = await getLocale();
   const s = loc(base, locale, "services", slug);
   const tr = (x: string) => t(x, locale);
-  const pillar = getPillar(s.pillar);
-  const related = servicesByPillar(s.pillar).filter((x) => x.slug !== s.slug);
+  const pillar = await getPillar(s.pillar);
+  const related = (await getServicesByPillar(s.pillar)).filter((x) => x.slug !== s.slug);
 
   return (
     <>

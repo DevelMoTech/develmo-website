@@ -2,12 +2,13 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { PageHero } from "@/components/PageHero";
 import { CtaBand } from "@/components/CtaBand";
-import { industries, getIndustry } from "@/lib/industries";
+import { getIndustries, getIndustry } from "@/lib/repo/industries";
 import { getLocale } from "@/lib/i18n-server";
 import { t, loc } from "@/lib/i18n";
 import { pageMeta } from "@/lib/meta";
 
-export function generateStaticParams() {
+export async function generateStaticParams() {
+  const industries = await getIndustries();
   return industries.map((i) => ({ slug: i.slug }));
 }
 
@@ -17,14 +18,14 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const i = getIndustry(slug);
+  const i = await getIndustry(slug);
   if (!i) return {};
   return pageMeta({ title: i.name, description: i.blurb, path: `/who-we-help/${slug}` });
 }
 
 export default async function IndustryPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const base = getIndustry(slug);
+  const base = await getIndustry(slug);
   if (!base) notFound();
   const locale = await getLocale();
   const i = loc(base, locale, "industries", slug);

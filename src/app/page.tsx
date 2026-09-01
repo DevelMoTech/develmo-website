@@ -4,8 +4,8 @@ import { Icon } from "@/components/icons";
 import { HeroStage } from "@/components/HeroStage";
 import { ProductCollage } from "@/components/ProductCollage";
 import { ProductSlider } from "@/components/ProductSlider";
-import { pillars } from "@/lib/services";
-import { industries } from "@/lib/industries";
+import { getPillars } from "@/lib/repo/services";
+import { getIndustries } from "@/lib/repo/industries";
 import { getLocale } from "@/lib/i18n-server";
 import { t, loc } from "@/lib/i18n";
 
@@ -28,11 +28,11 @@ const clients = [
 ];
 const clientsRev = [...clients].reverse();
 
-const featuredIndustries = industries.slice(0, 6);
-
 export default async function Home() {
   const locale = await getLocale();
   const tr = (s: string) => t(s, locale);
+  const pillars = await getPillars();
+  const featuredIndustries = (await getIndustries()).slice(0, 6);
   return (
     <>
       {/* 1 · HERO (full background video) */}

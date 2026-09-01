@@ -2,10 +2,13 @@ import type { Metadata } from "next";
 import { PageHero } from "@/components/PageHero";
 import { CtaBand } from "@/components/CtaBand";
 import { aboutContent } from "@/lib/about";
+import { getAboutContent } from "@/lib/repo/about";
 import { getLocale } from "@/lib/i18n-server";
 import { t, loc } from "@/lib/i18n";
 import { pageMeta } from "@/lib/meta";
 
+// Metadata stays static English from the file copy (HANDOFF §5.3); the page
+// body reads the repo with the file as fallback.
 const cEn = aboutContent["about-develmo"];
 
 export const metadata: Metadata = pageMeta({
@@ -16,7 +19,8 @@ export const metadata: Metadata = pageMeta({
 
 export default async function AboutDevelMoPage() {
   const locale = await getLocale();
-  const c = loc(cEn, locale, "about", "about-develmo");
+  const cBase = (await getAboutContent("about-develmo")) ?? cEn;
+  const c = loc(cBase, locale, "about", "about-develmo");
   const tr = (s: string) => t(s, locale);
   return (
     <>

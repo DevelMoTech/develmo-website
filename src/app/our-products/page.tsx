@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { PageHero } from "@/components/PageHero";
 import { CtaBand } from "@/components/CtaBand";
-import { products } from "@/lib/products";
+import { getProducts } from "@/lib/repo/products";
 import { getLocale } from "@/lib/i18n-server";
 import { t, loc } from "@/lib/i18n";
 import { pageMeta } from "@/lib/meta";
@@ -17,6 +17,7 @@ export const metadata: Metadata = pageMeta({
 export default async function OurProductsPage() {
   const locale = await getLocale();
   const tr = (s: string) => t(s, locale);
+  const products = await getProducts();
   return (
     <>
       <PageHero

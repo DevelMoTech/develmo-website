@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { PageHero } from "@/components/PageHero";
 import { CtaBand } from "@/components/CtaBand";
-import { posts, formatDate } from "@/lib/posts";
+import { formatDate } from "@/lib/posts";
+import { getPosts } from "@/lib/repo/posts";
 import { getLocale } from "@/lib/i18n-server";
 import { t } from "@/lib/i18n";
 
@@ -15,6 +16,7 @@ export const metadata: Metadata = {
 export default async function BlogPage() {
   const locale = await getLocale();
   const tr = (s: string) => t(s, locale);
+  const posts = await getPosts("blog");
   return (
     <>
       <PageHero

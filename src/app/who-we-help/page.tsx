@@ -3,7 +3,7 @@ import Link from "next/link";
 import { PageHero } from "@/components/PageHero";
 import { CtaBand } from "@/components/CtaBand";
 import { Icon } from "@/components/icons";
-import { industries } from "@/lib/industries";
+import { getIndustries } from "@/lib/repo/industries";
 import { getLocale } from "@/lib/i18n-server";
 import { t, loc } from "@/lib/i18n";
 import { pageMeta } from "@/lib/meta";
@@ -18,6 +18,7 @@ export const metadata: Metadata = pageMeta({
 export default async function WhoWeHelpPage() {
   const locale = await getLocale();
   const tr = (s: string) => t(s, locale);
+  const industries = await getIndustries();
   return (
     <>
       <PageHero
