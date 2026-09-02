@@ -11,7 +11,6 @@ export function AuthCard({
     <div className="adm-auth">
       <section className="adm-auth-card" aria-labelledby="adm-auth-title">
         <div className="adm-auth-brand">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/develmo-logo.png" alt="DevelMo" />
           <span>Admin console</span>
         </div>

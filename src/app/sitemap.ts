@@ -12,6 +12,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const industries = await getIndustries();
   const products = await getProducts();
   const posts = await getPosts("blog");
+  const articles = await getPosts("kb");
 
   const staticRoutes = [
     "",
@@ -35,14 +36,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const productRoutes = products
     .filter((p) => p.slug !== "crowdiq")
     .map((p) => `/our-products/${p.slug}`);
-  const blogRoutes = posts.map((p) => `/our-blogs/${p.slug}`);
+  // Posts flagged noindex stay out of the sitemap.
+  const blogRoutes = posts.filter((p) => !p.seo.noindex).map((p) => `/our-blogs/${p.slug}`);
+  const kbRoutes = articles.filter((p) => !p.seo.noindex).map((p) => `/our-knowledge-base/${p.slug}`);
 
-  return [...staticRoutes, ...serviceRoutes, ...industryRoutes, ...productRoutes, ...blogRoutes].map(
+  return [...staticRoutes, ...serviceRoutes, ...industryRoutes, ...productRoutes, ...blogRoutes, ...kbRoutes].map(
     (path) => ({
       url: `${base}${path}`,
       lastModified: now,
       changeFrequency: "monthly" as const,
-      priority: path === "" ? 1 : path.startsWith("/our-blogs/") ? 0.6 : 0.7,
+      priority: path === "" ? 1 : path.startsWith("/our-blogs/") || path.startsWith("/our-knowledge-base/") ? 0.6 : 0.7,
     }),
   );
 }

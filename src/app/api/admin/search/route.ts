@@ -35,12 +35,12 @@ export const GET = adminRoute({ auth: "required" }, async ({ req, auth }) => {
   const db = getDb();
   if (can(role, "content:read")) {
     const rows = await db
-      .select({ title: posts.title, slug: posts.slug, status: posts.status })
+      .select({ id: posts.id, title: posts.title, slug: posts.slug, status: posts.status })
       .from(posts)
       .where(or(ilike(posts.title, needle), ilike(posts.slug, needle)))
       .orderBy(desc(posts.updatedAt))
       .limit(5);
-    for (const r of rows) hits.push({ group: "Posts", label: r.title, detail: r.status, href: `/admin/posts?q=${encodeURIComponent(r.slug)}` });
+    for (const r of rows) hits.push({ group: "Posts", label: r.title, detail: r.status, href: `/admin/posts/${r.id}` });
     const jobRows = await db
       .select({ title: jobs.title, slug: jobs.slug, status: jobs.status })
       .from(jobs)

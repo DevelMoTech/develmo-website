@@ -24,6 +24,16 @@ const eslintConfig = defineConfig([
       "react-hooks/immutability": "warn",
     },
   },
+  {
+    // Uploaded library images are served from this origin already sized by
+    // the editor; the console's thumbnails and the post hero use a plain
+    // <img> like the rest of the public site (which has no next/image usage)
+    // rather than routing every upload through the image optimiser.
+    files: ["src/app/(admin)/**/*.tsx", "src/components/PostArticle.tsx"],
+    rules: {
+      "@next/next/no-img-element": "off",
+    },
+  },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:

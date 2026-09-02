@@ -80,7 +80,9 @@ async function readBody(req: Request): Promise<Record<string, unknown>> {
 }
 
 export function adminRoute<T>(
-  opts: { auth: AuthMode; permission?: Permission; schema?: ZodType<T> },
+  // rawBody: leave the request body untouched (multipart uploads read it
+  // themselves); the CSRF token must then travel in the header.
+  opts: { auth: AuthMode; permission?: Permission; schema?: ZodType<T>; rawBody?: boolean },
   handler: (ctx: ApiContext<T>) => Promise<Response>,
 ): (req: Request) => Promise<Response> {
   return async (req: Request) => {
@@ -97,7 +99,7 @@ export function adminRoute<T>(
         await securityEvent({ type: "csrf_rejected", ipHash, path, userAgent, meta: { reason: "origin" } });
         return apiError(403, "csrf");
       }
-      bodyRaw = await readBody(req);
+      if (!opts.rawBody) bodyRaw = await readBody(req);
       const submitted = req.headers.get(CSRF_HEADER) ?? (typeof bodyRaw.csrf === "string" ? bodyRaw.csrf : null);
       if (!csrfTokenMatches(cookies[CSRF_COOKIE], submitted)) {
         await securityEvent({ type: "csrf_rejected", ipHash, path, userAgent, meta: { reason: "token" } });

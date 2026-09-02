@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 export default async function BlogPage() {
   const locale = await getLocale();
   const tr = (s: string) => t(s, locale);
-  const posts = await getPosts("blog");
+  const posts = await getPosts("blog", locale);
   return (
     <>
       <PageHero

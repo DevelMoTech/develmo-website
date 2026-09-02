@@ -41,7 +41,6 @@ export function MfaEnrolForm({ csrf, qr, secret, email }: { csrf: string; qr: st
       <p className="adm-help">
         1. Scan this code with an authenticator app (Google Authenticator, Microsoft Authenticator, 1Password, Authy).
       </p>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
       <img className="adm-qr" src={qr} alt="QR code for your authenticator app" width={200} height={200} />
       <details>
         <summary className="adm-help">Cannot scan? Enter the key manually</summary>

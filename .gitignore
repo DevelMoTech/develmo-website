@@ -38,6 +38,9 @@ yarn-error.log*
 .env*
 !.env.example
 
+# local media storage fallback (src/lib/storage.ts)
+/.data/
+
 # vercel
 .vercel
 

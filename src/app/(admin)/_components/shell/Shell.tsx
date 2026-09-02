@@ -66,7 +66,6 @@ export function Shell({
       <aside className="adm-side" id="adm-sidebar" aria-label="Console navigation">
         <div className="adm-side-head">
           <Link href="/admin" className="adm-side-brand" onClick={() => closeDrawer()}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/develmo-logo-white.png" alt="" />
             <span>DevelMo Admin</span>
           </Link>

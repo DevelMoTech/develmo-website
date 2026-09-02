@@ -38,6 +38,17 @@ const PATHS = {
   logout: "M10 4H4v16h6M14 8l5 4-5 4M19 12H9",
   sort: "M8 4v16M8 20l-3-3M8 20l3-3M16 20V4M16 4l-3 3M16 4l3 3",
   keyboard: "M3 7h18v10H3zM7 11h.01M11 11h.01M15 11h.01M7 14h10",
+  upload: "M12 16V4M6 9l6-6 6 6M4 20h16",
+  trash: "M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6",
+  eye: "M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z",
+  grid: "M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z",
+  list: "M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01",
+  tag: "M3 12V4h8l9 9-8 8zM7 8h.01",
+  folder: "M3 6h6l2 2h10v11H3z",
+  history: "M4 12a8 8 0 1 1 2.3 5.7M4 18v-5h5M12 8v4l3 2",
+  link: "M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1.5 1.5M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1.5-1.5",
+  image: "M4 5h16v14H4zM4 15l5-5 4 4 3-3 4 4M15 9h.01",
+  edit: "M4 20h4l11-11-4-4L4 16zM13 7l4 4",
 } as const;
 
 export type IconName = keyof typeof PATHS;

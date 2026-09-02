@@ -197,8 +197,9 @@ test("global search finds pages and records, sidebar collapses to icons", async 
   await page.locator("#adm-search").fill("cameras");
   await expect(page.getByRole("option", { name: /Turn existing cameras/ })).toBeVisible();
   await page.getByRole("option", { name: /Turn existing cameras/ }).click();
-  await page.waitForURL("**/admin/posts?q=**");
-  await expect(page.getByRole("cell", { name: /Turn existing cameras/ })).toBeVisible();
+  // A post hit opens its editor.
+  await page.waitForURL(/\/admin\/posts\/[0-9a-f-]{36}$/);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(/Turn existing cameras/);
   await page.getByRole("button", { name: "Collapse sidebar" }).click();
   await expect(page.locator(".adm-shell")).toHaveAttribute("data-collapsed", "true");
   await page.reload();

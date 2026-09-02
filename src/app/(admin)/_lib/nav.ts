@@ -73,6 +73,7 @@ const SEGMENT_LABELS: Record<string, string> = {
   edit: "Edit",
   invite: "Invite",
   preview: "Preview",
+  revisions: "Revisions",
   spam: "Spam",
   pages: "Pages",
   redirects: "Redirects",

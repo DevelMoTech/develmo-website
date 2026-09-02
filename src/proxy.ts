@@ -12,6 +12,8 @@ const PUBLIC_ADMIN_PAGES = new Set([
   "/admin/reset-password",
 ]);
 
+const PREVIEW_PATH = /^\/admin\/posts\/[^/]+\/preview\/?$/;
+
 function randomToken(): string {
   const bytes = new Uint8Array(32);
   crypto.getRandomValues(bytes);
@@ -24,6 +26,17 @@ export function proxy(req: NextRequest) {
   const { pathname, search } = req.nextUrl;
   const isAdminPage = pathname === "/admin" || pathname.startsWith("/admin/");
   const isAdminApi = pathname.startsWith("/api/admin/");
+
+  // Draft previews must not reveal a post exists: no session cookie means a
+  // plain 404, never a login redirect. The page itself repeats the check.
+  if (PREVIEW_PATH.test(pathname) && !req.cookies.has(SESSION_COOKIE)) {
+    const missing = req.nextUrl.clone();
+    missing.pathname = "/admin/__preview-not-found";
+    missing.search = "";
+    const res = NextResponse.rewrite(missing);
+    res.headers.set("X-Robots-Tag", "noindex, nofollow");
+    return res;
+  }
 
   // Optimistic session gate for the console: cookie presence only. The real
   // session, MFA and role checks run in the pages and route handlers.

@@ -26,10 +26,13 @@ export const media = pgTable("media", {
   width: integer("width"),
   height: integer("height"),
   altText: text("alt_text").notNull().default(""),
+  // Virtual folder path such as "posts/2026"; empty string is the root.
+  folder: text("folder").notNull().default(""),
   tags: text("tags").array().notNull().default([]),
   uploadedById: uuid("uploaded_by_id").references(() => users.id, { onDelete: "set null" }),
   replacedAt: timestamp("replaced_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 export const posts = pgTable(
@@ -57,6 +60,7 @@ export const posts = pgTable(
     ogImageId: uuid("og_image_id").references(() => media.id, { onDelete: "set null" }),
     noindex: boolean("noindex").notNull().default(false),
     createdById: uuid("created_by_id").references(() => users.id, { onDelete: "set null" }),
+    updatedById: uuid("updated_by_id").references(() => users.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -73,8 +77,10 @@ export const postRevisions = pgTable(
     postId: uuid("post_id")
       .notNull()
       .references(() => posts.id, { onDelete: "cascade" }),
-    // Full post field snapshot at save time.
+    // Full post field snapshot at save time, translations included.
     snapshot: jsonb("snapshot").notNull(),
+    // Why the revision exists: created, saved, restored, bulk action, cron.
+    note: text("note").notNull().default(""),
     createdById: uuid("created_by_id").references(() => users.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },

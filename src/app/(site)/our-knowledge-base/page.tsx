@@ -23,7 +23,10 @@ const topics = [
 export default async function KnowledgeBasePage() {
   const locale = await getLocale();
   const tr = (s: string) => t(s, locale);
-  const posts = await getPosts("blog");
+  const posts = await getPosts("blog", locale);
+  // Knowledge base articles (type "kb") are DB driven; the section only
+  // renders once at least one exists, so the page is unchanged until then.
+  const articles = await getPosts("kb", locale);
   return (
     <>
       <PageHero
@@ -46,6 +49,27 @@ export default async function KnowledgeBasePage() {
           </div>
         </div>
       </section>
+
+      {articles.length > 0 && (
+        <section className="section">
+          <div className="container">
+            <div className="kicker">{tr("Knowledge Base")}</div>
+            <h2 className="h2">{tr("Guides and articles")}</h2>
+            <div className="grid g3" style={{ marginTop: 36 }}>
+              {articles.map((p) => (
+                <Link className="card" href={`/our-knowledge-base/${p.slug}`} key={p.slug}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "var(--blue-ink)", letterSpacing: ".04em", textTransform: "uppercase" }}>
+                    {p.category} · {formatDate(p.date)}
+                  </div>
+                  <h3 style={{ marginTop: 8, fontSize: 17 }}>{p.title}</h3>
+                  <p>{p.excerpt}</p>
+                  <span className="link">{tr("Read article")} →</span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       <section className="section bg-light">
         <div className="container">

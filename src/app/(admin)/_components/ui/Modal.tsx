@@ -14,6 +14,7 @@ export function Modal({
   title,
   children,
   footer,
+  wide,
 }: {
   id: string;
   open: boolean;
@@ -21,6 +22,8 @@ export function Modal({
   title: string;
   children: ReactNode;
   footer?: ReactNode;
+  // Two-column content such as the media details and picker.
+  wide?: boolean;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const trigger = useRef<Element | null>(null);
@@ -61,7 +64,7 @@ export function Modal({
     <dialog
       ref={ref}
       id={id}
-      className="adm-modal"
+      className={wide ? "adm-modal adm-modal-wide" : "adm-modal"}
       aria-labelledby={`${id}-title`}
       onClick={(e) => {
         if (e.target === ref.current) ref.current?.close();
