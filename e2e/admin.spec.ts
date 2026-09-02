@@ -176,8 +176,8 @@ test("revoking a session takes effect on that session's next request", async ({ 
   // B works right now.
   await b.page.goto("/admin/account");
   await expect(b.page.getByRole("heading", { level: 1 })).toHaveText("E2E User");
-  // A revokes B from the account page.
-  await a.page.goto("/admin/account");
+  // A revokes B from the sessions tab of the account page.
+  await a.page.goto("/admin/account?tab=sessions");
   const rows = a.page.getByRole("row").filter({ hasNotText: "This device" }).filter({ has: a.page.getByRole("button", { name: "Revoke" }) });
   await expect(rows).toHaveCount(1);
   await rows.getByRole("button", { name: "Revoke" }).click();
