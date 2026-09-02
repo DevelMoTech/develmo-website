@@ -53,6 +53,15 @@ export const rateLimitConfig = pgTable("rate_limit_config", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+// Fixed-window counters for the database-backed rate limiter, used whenever
+// Upstash is not configured (local dev, e2e). Durable across instances.
+export const rateLimitHits = pgTable("rate_limit_hits", {
+  // `${limiter}:${identity}:${windowStart}`
+  key: text("key").primaryKey(),
+  count: integer("count").notNull().default(0),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+});
+
 export const dependencyAudits = pgTable("dependency_audits", {
   id: uuid("id").primaryKey().defaultRandom(),
   runAt: timestamp("run_at", { withTimezone: true }).notNull().defaultNow(),

@@ -1,31 +1,20 @@
 import { NextResponse } from "next/server";
 import { contactSchema, type ContactInput } from "@/lib/contact-schema";
+import { getClientIp } from "@/lib/auth/ip";
+import { consumeLimit } from "@/lib/ratelimit";
 import { verifyRecaptcha } from "@/lib/recaptcha";
 
 export const runtime = "nodejs";
 
-// Simple in-memory rate limit (per warm instance). For production scale,
-// back this with Upstash/Redis via env. Good enough to stop basic abuse.
-const hits = new Map<string, { count: number; ts: number }>();
-function rateLimited(ip: string) {
-  const now = Date.now();
-  const windowMs = 60_000;
-  const max = 5;
-  const cur = hits.get(ip);
-  if (!cur || now - cur.ts > windowMs) {
-    hits.set(ip, { count: 1, ts: now });
-    return false;
-  }
-  cur.count += 1;
-  return cur.count > max;
-}
-
 export async function POST(req: Request) {
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
-  if (rateLimited(ip)) {
+  // Durable limiter (Upstash, or the database window): 5 per minute per IP
+  // by default, editable at runtime from the security manager.
+  const ip = getClientIp(req.headers);
+  const limit = await consumeLimit("contact", ip);
+  if (limit.limited) {
     return NextResponse.json(
       { ok: false, error: "Too many requests. Please try again in a minute." },
-      { status: 429 },
+      { status: 429, headers: { "retry-after": String(Math.max(1, Math.ceil((limit.resetAt.getTime() - Date.now()) / 1000))) } },
     );
   }
 

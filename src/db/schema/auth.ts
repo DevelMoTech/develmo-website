@@ -1,6 +1,7 @@
 import {
   boolean,
   index,
+  integer,
   jsonb,
   pgEnum,
   pgTable,
@@ -26,6 +27,8 @@ export const users = pgTable("users", {
   // TOTP secret encrypted at rest with AUTH_SECRET-derived key, null until enrolled.
   totpSecretEnc: text("totp_secret_enc"),
   totpEnabled: boolean("totp_enabled").notNull().default(false),
+  // Last accepted TOTP time step, so a code cannot be replayed inside its window.
+  totpLastStep: integer("totp_last_step"),
   // Set by the bootstrap script (temporary password) and by "force password reset".
   mustChangePassword: boolean("must_change_password").notNull().default(false),
   lastLoginAt: timestamp("last_login_at", { withTimezone: true }),

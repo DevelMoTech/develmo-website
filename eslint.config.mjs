@@ -12,7 +12,7 @@ const eslintConfig = defineConfig([
     // refactored in the dashboard work, so these stay warnings for exactly
     // these files. They remain errors for all new code.
     files: [
-      "src/app/page.tsx",
+      "src/app/(site)/page.tsx",
       "src/components/ContactForm.tsx",
       "src/components/MegaNav.tsx",
       "src/components/SiteFooter.tsx",
