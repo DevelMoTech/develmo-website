@@ -74,6 +74,7 @@ const SEGMENT_LABELS: Record<string, string> = {
   invite: "Invite",
   preview: "Preview",
   revisions: "Revisions",
+  templates: "Email templates",
   spam: "Spam",
   pages: "Pages",
   redirects: "Redirects",

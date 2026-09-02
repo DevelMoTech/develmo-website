@@ -1,8 +1,12 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { PageHero } from "@/components/PageHero";
 import { CtaBand } from "@/components/CtaBand";
 import { getLocale } from "@/lib/i18n-server";
 import { t } from "@/lib/i18n";
+import { EMPLOYMENT_TYPES, labelFor, officeByCode } from "@/lib/jobs-shared";
+import { getOpenJobs } from "@/lib/repo/jobs";
+import { plainExcerpt } from "@/lib/slug";
 
 export const metadata: Metadata = {
   title: "Careers",
@@ -20,6 +24,9 @@ const perks = [
 export default async function JobsPage() {
   const locale = await getLocale();
   const tr = (s: string) => t(s, locale);
+  // Open roles come from the database through the repo layer; with none the
+  // page renders exactly as it did before the job board existed.
+  const jobs = await getOpenJobs();
   return (
     <>
       <PageHero
@@ -47,6 +54,22 @@ export default async function JobsPage() {
         <div className="container">
           <div className="kicker">{tr("Open roles")}</div>
           <h2 className="h2">{tr("We are always meeting good engineers")}</h2>
+          {jobs.length > 0 && (
+            <div className="grid g3" style={{ marginTop: 36, marginBottom: 36 }}>
+              {jobs.map((j) => {
+                const office = officeByCode(j.officeCode);
+                const meta = [j.department, j.location || (office ? tr(office.name) : ""), tr(labelFor(EMPLOYMENT_TYPES, j.employmentType))].filter(Boolean).join(" · ");
+                return (
+                  <Link className="card" href={`/jobs/${j.slug}`} key={j.slug}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: "var(--blue-ink)", letterSpacing: ".04em", textTransform: "uppercase" }}>{meta}</div>
+                    <h3 style={{ marginTop: 8 }}>{j.title}</h3>
+                    <p>{plainExcerpt(j.summaryMd, 180)}</p>
+                    <span className="link">{tr("View role")} →</span>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
           <p className="lead">
             {tr(
               "We do not always have a role posted, but we are consistently interested in AI/ML, computer vision, full-stack and DevOps engineers. If that is you, send your CV and a note on what you have built to",

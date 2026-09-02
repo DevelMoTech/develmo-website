@@ -36,6 +36,8 @@ export const jobs = pgTable(
     salaryMin: integer("salary_min"),
     salaryMax: integer("salary_max"),
     salaryCurrency: text("salary_currency").notNull().default("GBP"),
+    // year | month | day | hour, the JobPosting unitText.
+    salaryPeriod: text("salary_period").notNull().default("year"),
     hideSalary: boolean("hide_salary").notNull().default(false),
     summaryMd: text("summary_md").notNull().default(""),
     responsibilitiesMd: text("responsibilities_md").notNull().default(""),
@@ -44,10 +46,14 @@ export const jobs = pgTable(
     opensAt: timestamp("opens_at", { withTimezone: true }),
     closesAt: timestamp("closes_at", { withTimezone: true }),
     status: jobStatus("status").notNull().default("draft"),
+    // First time the role went live; the JobPosting datePosted.
+    openedAt: timestamp("opened_at", { withTimezone: true }),
     metaTitle: text("meta_title"),
     metaDescription: text("meta_description"),
+    canonicalOverride: text("canonical_override"),
     noindex: boolean("noindex").notNull().default(false),
     createdById: uuid("created_by_id").references(() => users.id, { onDelete: "set null" }),
+    updatedById: uuid("updated_by_id").references(() => users.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -79,6 +85,15 @@ export const applications = pgTable(
     // 1-5, null = unrated.
     rating: integer("rating"),
     assigneeId: uuid("assignee_id").references(() => users.id, { onDelete: "set null" }),
+    // Applicant emails: acknowledgement on submit, manual rejection later.
+    ackSentAt: timestamp("ack_sent_at", { withTimezone: true }),
+    ackError: text("ack_error"),
+    rejectionSentAt: timestamp("rejection_sent_at", { withTimezone: true }),
+    rejectionSentById: uuid("rejection_sent_by_id").references(() => users.id, { onDelete: "set null" }),
+    // Locale the form was submitted in, and when consent was given.
+    locale: text("locale").notNull().default("en"),
+    consentAt: timestamp("consent_at", { withTimezone: true }),
+    // Stored hashed with the server-side salt, for abuse prevention only.
     ipHash: text("ip_hash"),
     userAgent: text("user_agent"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

@@ -66,7 +66,7 @@ test.afterAll(async () => {
 
 test("create and publish a post in the editor, confirm it on the public site with correct head, OG and JSON-LD, then unpublish", async ({ browser, baseURL }) => {
   test.setTimeout(90_000);
-  const { context, page, request, csrf } = await signedIn(browser, baseURL!);
+  const { context, page, request } = await signedIn(browser, baseURL!);
   await page.setViewportSize({ width: 1280, height: 900 });
   const title = `E2E ${RUN} Edge inference for retail`;
   const slug = `e2e-${RUN}-edge-inference-for-retail`;
@@ -121,7 +121,10 @@ test("create and publish a post in the editor, confirm it on the public site wit
   const audit = await db().query<{ action: string }>(`select action from audit_log where entity_type = 'post' and entity_id = $1`, [id]);
   expect(audit.rows.map((r) => r.action)).toContain("post.publish");
 
-  // Unpublish from the editor: the public route 404s at once.
+  // Unpublish from the editor: the public route 404s at once. The publish
+  // date is filled in by the client, so a value there means the editor has
+  // hydrated and the select change will reach React state.
+  await expect(page.getByLabel("Publish date")).not.toHaveValue("");
   await page.getByLabel("Status", { exact: true }).selectOption("draft");
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByText("Saved", { exact: true })).toBeVisible();

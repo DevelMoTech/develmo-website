@@ -4,6 +4,7 @@ import { getServices } from "@/lib/repo/services";
 import { getIndustries } from "@/lib/repo/industries";
 import { getProducts } from "@/lib/repo/products";
 import { getPosts } from "@/lib/repo/posts";
+import { getOpenJobs } from "@/lib/repo/jobs";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = site.url;
@@ -13,6 +14,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const products = await getProducts();
   const posts = await getPosts("blog");
   const articles = await getPosts("kb");
+  const jobs = await getOpenJobs();
 
   const staticRoutes = [
     "",
@@ -39,8 +41,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Posts flagged noindex stay out of the sitemap.
   const blogRoutes = posts.filter((p) => !p.seo.noindex).map((p) => `/our-blogs/${p.slug}`);
   const kbRoutes = articles.filter((p) => !p.seo.noindex).map((p) => `/our-knowledge-base/${p.slug}`);
+  const jobRoutes = jobs.filter((j) => !j.seo.noindex).map((j) => `/jobs/${j.slug}`);
 
-  return [...staticRoutes, ...serviceRoutes, ...industryRoutes, ...productRoutes, ...blogRoutes, ...kbRoutes].map(
+  return [...staticRoutes, ...serviceRoutes, ...industryRoutes, ...productRoutes, ...blogRoutes, ...kbRoutes, ...jobRoutes].map(
     (path) => ({
       url: `${base}${path}`,
       lastModified: now,

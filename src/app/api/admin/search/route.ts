@@ -1,7 +1,7 @@
 import { desc, ilike, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { getDb } from "@/db";
-import { jobs, posts, submissions, users } from "@/db/schema";
+import { applications, jobs, posts, submissions, users } from "@/db/schema";
 import { adminRoute, apiError, apiOk } from "@/lib/auth/api";
 import { can } from "@/lib/auth/rbac";
 import { NAV_GROUPS } from "@/app/(admin)/_lib/nav";
@@ -42,14 +42,21 @@ export const GET = adminRoute({ auth: "required" }, async ({ req, auth }) => {
       .limit(5);
     for (const r of rows) hits.push({ group: "Posts", label: r.title, detail: r.status, href: `/admin/posts/${r.id}` });
     const jobRows = await db
-      .select({ title: jobs.title, slug: jobs.slug, status: jobs.status })
+      .select({ id: jobs.id, title: jobs.title, slug: jobs.slug, status: jobs.status })
       .from(jobs)
       .where(or(ilike(jobs.title, needle), ilike(jobs.slug, needle)))
       .orderBy(desc(jobs.updatedAt))
       .limit(5);
-    for (const r of jobRows) hits.push({ group: "Jobs", label: r.title, detail: r.status, href: `/admin/jobs?q=${encodeURIComponent(r.slug)}` });
+    for (const r of jobRows) hits.push({ group: "Jobs", label: r.title, detail: r.status, href: `/admin/jobs/${r.id}` });
   }
   if (can(role, "submissions:read")) {
+    const appRows = await db
+      .select({ id: applications.id, name: applications.name, email: applications.email, stage: applications.stage })
+      .from(applications)
+      .where(or(ilike(applications.name, needle), ilike(applications.email, needle)))
+      .orderBy(desc(applications.createdAt))
+      .limit(5);
+    for (const r of appRows) hits.push({ group: "Applications", label: r.name, detail: `${r.email} (${r.stage})`, href: `/admin/applications/${r.id}` });
     const rows = await db
       .select({ id: submissions.id, name: submissions.name, email: submissions.email, company: submissions.company })
       .from(submissions)

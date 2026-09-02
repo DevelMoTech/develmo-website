@@ -34,7 +34,7 @@ function minScore(): number {
   return Number.isFinite(raw) && raw >= 0 && raw <= 1 ? raw : DEFAULT_MIN_SCORE;
 }
 
-export async function verifyRecaptcha(token: string, ip?: string): Promise<RecaptchaResult> {
+export async function verifyRecaptcha(token: string, ip?: string, action: string = RECAPTCHA_ACTION): Promise<RecaptchaResult> {
   const secret = process.env.RECAPTCHA_SECRET_KEY;
   if (!secret) return { ok: true, skipped: true, score: null };
   if (!token) return { ok: false, reason: "missing-token" };
@@ -59,7 +59,7 @@ export async function verifyRecaptcha(token: string, ip?: string): Promise<Recap
   if (!data.success) {
     return { ok: false, reason: data["error-codes"]?.join(",") || "rejected" };
   }
-  if (data.action && data.action !== RECAPTCHA_ACTION) {
+  if (data.action && data.action !== action) {
     return { ok: false, reason: `action:${data.action}` };
   }
 

@@ -31,13 +31,13 @@ declare global {
   }
 }
 
-function executeRecaptcha(key: string): Promise<string> {
+export function executeRecaptcha(key: string, action: string = RECAPTCHA_ACTION): Promise<string> {
   const g = window.grecaptcha;
   // Undefined when api.js is still loading or was blocked (extension, CSP, offline).
   if (!g) return Promise.reject(new Error("recaptcha-unavailable"));
   return new Promise((resolve, reject) => {
     g.ready(() => {
-      g.execute(key, { action: RECAPTCHA_ACTION }).then(resolve, reject);
+      g.execute(key, { action }).then(resolve, reject);
     });
   });
 }
@@ -215,7 +215,7 @@ export function ContactForm({ locale = "en" }: { locale?: string }) {
 // Google's terms require either the floating badge or this attribution. The
 // badge is hidden in globals.css because it lands on top of the StickyCta on
 // mobile, so the line below is what keeps the integration compliant.
-function RecaptchaNotice({ tr }: { tr: (s: string) => string }) {
+export function RecaptchaNotice({ tr }: { tr: (s: string) => string }) {
   const template = tr("This site is protected by reCAPTCHA and the Google {privacy} and {terms} apply.");
   const links: Record<string, { href: string; label: string }> = {
     "{privacy}": { href: "https://policies.google.com/privacy", label: tr("Privacy Policy") },

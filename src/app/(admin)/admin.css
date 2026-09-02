@@ -699,3 +699,14 @@ button.adm-link { background: none; border: 0; padding: 0; font: inherit; font-w
 .adm-media-preview img { inline-size: 100%; block-size: auto; max-block-size: 320px; object-fit: contain; border-radius: 10px; background: var(--adm-surface-3); border: var(--adm-border-w) solid var(--adm-line); }
 .adm-media-preview .adm-dl { margin: 0; }
 .adm-usage { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 6px; font-size: 14px; }
+
+/* Job board and applicant pipeline (phase 5) */
+.adm-editor-body-short { min-block-size: 160px; }
+.adm-md-preview-short { min-block-size: 160px; }
+.adm-stars { color: var(--adm-warn); letter-spacing: 1px; font-size: 15px; white-space: nowrap; }
+.adm-stars-off { color: var(--adm-line-strong); }
+.adm-rating { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.adm-star { inline-size: 44px; block-size: 44px; border: var(--adm-border-w) solid var(--adm-line); border-radius: 8px; background: var(--adm-surface); color: var(--adm-line-strong); font-size: 22px; line-height: 1; cursor: pointer; }
+.adm-star:hover:not(:disabled) { border-color: var(--adm-warn); color: var(--adm-warn); }
+.adm-star-on { color: var(--adm-warn); border-color: var(--adm-warn); }
+.adm-star:disabled { cursor: not-allowed; opacity: .7; }

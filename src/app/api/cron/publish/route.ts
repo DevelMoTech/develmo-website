@@ -1,11 +1,13 @@
 import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
+import { closeDueJobs } from "@/lib/admin/jobs";
 import { publishDuePosts } from "@/lib/admin/posts";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// Scheduled publishing without a deploy (brief §3.3). Vercel Cron calls this
+// Scheduled publishing without a deploy (brief §3.3), and closing job
+// postings whose closing time has passed (§3.4). Vercel Cron calls this
 // with "Authorization: Bearer <CRON_SECRET>". With the secret unset the
 // route refuses with 503 so a misconfiguration is visible, not silent. The
 // repo layer already shows due scheduled posts; this flips the stored
@@ -22,5 +24,6 @@ export async function GET(req: Request) {
   if (!process.env.CRON_SECRET) return NextResponse.json({ ok: false, error: "not_configured" }, { status: 503 });
   if (!authorised(req)) return NextResponse.json({ ok: false, error: "unauthorised" }, { status: 401 });
   const { published } = await publishDuePosts();
-  return NextResponse.json({ ok: true, published, at: new Date().toISOString() });
+  const { closed } = await closeDueJobs();
+  return NextResponse.json({ ok: true, published, closedJobs: closed, at: new Date().toISOString() });
 }

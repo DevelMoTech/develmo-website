@@ -37,6 +37,28 @@ export function nextSlug(taken: string): string {
   return `${taken}-2`;
 }
 
+// Markdown source -> plain text, for excerpts and listing cards.
+export function plainText(markdown: string): string {
+  return markdown
+    .replace(/```[\s\S]*?```/g, " ")
+    .replace(/`([^`]*)`/g, "$1")
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, " ")
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
+    .replace(/^\s{0,3}(#{1,6}|>|[-*+]|\d+\.)\s+/gm, "")
+    .replace(/[*_~]+/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+// First `max` characters of the plain text, cut on a word boundary.
+export function plainExcerpt(markdown: string, max = 160): string {
+  const text = plainText(markdown);
+  if (text.length <= max) return text;
+  const cut = text.slice(0, max);
+  const space = cut.lastIndexOf(" ");
+  return `${(space > max / 2 ? cut.slice(0, space) : cut).replace(/[,;:.]+$/, "")}...`;
+}
+
 // Plain-English reading time from markdown source: strip syntax, count
 // words, 200 words per minute, never below one minute for non-empty text.
 export function readingTimeMinutes(markdown: string, wpm = 200): number {
