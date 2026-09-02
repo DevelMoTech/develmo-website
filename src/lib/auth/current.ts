@@ -1,6 +1,7 @@
 import { cache } from "react";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { getClientIp, hashIp } from "./ip";
 import { CSRF_COOKIE, SESSION_COOKIE, loadSession, type SessionWithUser } from "./session";
 import { can, mfaRequired, type Permission } from "./rbac";
 
@@ -18,6 +19,12 @@ export async function getCsrfToken(): Promise<string> {
   if (fromProxy) return fromProxy;
   const c = await cookies();
   return c.get(CSRF_COOKIE)?.value ?? "";
+}
+
+// Salted hash of the requesting IP, for audit rows written by pages.
+export async function getClientIpHash(): Promise<string> {
+  const h = await headers();
+  return hashIp(getClientIp(h));
 }
 
 export function loginRedirect(path: string): never {

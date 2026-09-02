@@ -2,6 +2,8 @@ import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { closeDueJobs } from "@/lib/admin/jobs";
 import { publishDuePosts } from "@/lib/admin/posts";
+import { purgeExpired, retryPendingDeliveries } from "@/lib/admin/submissions";
+import { sendDailyDigests } from "@/lib/submissions/digest";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -25,5 +27,10 @@ export async function GET(req: Request) {
   if (!authorised(req)) return NextResponse.json({ ok: false, error: "unauthorised" }, { status: 401 });
   const { published } = await publishDuePosts();
   const { closed } = await closeDueJobs();
-  return NextResponse.json({ ok: true, published, closedJobs: closed, at: new Date().toISOString() });
+  // Inbox housekeeping (brief §3.5): deliveries that never completed, daily
+  // digests, then the retention purge.
+  const retried = await retryPendingDeliveries();
+  const digests = await sendDailyDigests();
+  const purged = await purgeExpired();
+  return NextResponse.json({ ok: true, published, closedJobs: closed, retried, digests, purged, at: new Date().toISOString() });
 }

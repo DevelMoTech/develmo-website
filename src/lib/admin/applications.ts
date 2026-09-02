@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { and, desc, eq, gt, isNull, lte, or, sql } from "drizzle-orm";
 import { getDb } from "@/db";
-import { applicationEvents, applicationNotes, applications, jobs, users } from "@/db/schema";
+import { applicationEvents, applicationNotes, applications, jobs, submissions, users } from "@/db/schema";
 import { audit, securityEvent } from "@/lib/auth/log";
 import type { UserRow } from "@/lib/auth/session";
 import { DOCUMENT_CONTENT_TYPES, MAX_CV_BYTES, sniffDocument } from "@/lib/documents";
@@ -97,6 +97,27 @@ export async function createApplication(
     })
     .returning();
   await getDb().insert(applicationEvents).values({ applicationId: row.id, actorId: null, fromStage: null, toStage: "new", note: "Submitted through the careers page" });
+  // Cross-link into the submissions inbox (brief §3.5): applications land
+  // there too, with the pipeline as the place to act on them.
+  await getDb()
+    .insert(submissions)
+    .values({
+      kind: "application",
+      status: "new",
+      name: input.name,
+      email: input.email,
+      phone: input.phone,
+      message: input.coverNote,
+      topic: job.title,
+      source: "careers",
+      locale: input.locale,
+      userAgent: ctx.userAgent?.slice(0, 512) ?? null,
+      ipHash: ctx.ipHash,
+      deliveryStatus: "skipped",
+      deliveryError: "Application: the acknowledgement email is tracked on the application",
+      applicationId: row.id,
+    })
+    .catch((err) => console.error("[applications] inbox cross-link failed", row.id, err));
   return row;
 }
 
@@ -199,6 +220,8 @@ export async function cvDownloadUrl(id: string): Promise<{ url: string; filename
 export async function deleteApplication(id: string, actor: Actor): Promise<boolean> {
   const row = await current(id);
   if (!row) return false;
+  // The inbox cross-link carries the same personal data: it goes too.
+  await getDb().delete(submissions).where(eq(submissions.applicationId, id));
   await getDb().delete(applications).where(eq(applications.id, id));
   if (row.cvBlobKey) await deleteObject(row.cvBlobKey).catch((err) => console.error("[applications] cv delete failed", row.cvBlobKey, err));
   await audit({ actorId: actor.user.id, actorEmail: actor.user.email, action: "application.delete", entityType: "application", entityId: id, before: { name: row.name, email: row.email, jobId: row.jobId, stage: row.stage }, ipHash: actor.ipHash });

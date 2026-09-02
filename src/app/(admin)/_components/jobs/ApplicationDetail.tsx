@@ -158,7 +158,7 @@ export function ApplicationControls({
       </Card>
 
       <Card title="Assignment">
-        <Select id="ap-assignee" label="Assigned to" options={[{ value: "", label: "Nobody" }, ...staff.map((s) => ({ value: s.id, label: s.name }))]} value={assigneeId} onChange={(e) => saveAssignee(e.target.value)} disabled={!canWrite || busy} />
+        <Select id="ap-assignee" label="Assigned to" options={[{ value: "", label: "Nobody" }, ...staff.map((s) => ({ value: s.id, label: s.name }))]} value={assigneeId} onChange={(e) => saveAssignee(e.target.value)} disabled={!canWrite} help={pending === "Assignment" ? "Saving" : undefined} />
       </Card>
 
       <Card title="CV">

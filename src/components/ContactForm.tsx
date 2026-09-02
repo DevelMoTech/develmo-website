@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Script from "next/script";
+import { readVisit } from "@/components/VisitCapture";
 import { contactSchema, RECAPTCHA_ACTION } from "@/lib/contact-schema";
 import { t } from "@/lib/i18n";
 
@@ -103,11 +104,26 @@ export function ContactForm({ locale = "en" }: { locale?: string }) {
       }
     }
 
+    // Attribution for the inbox (brief §3.5): the qualifiers as structured
+    // fields (they stay in the message text too), the visit's landing page,
+    // external referrer and utm_* parameters, plus this page's own utm_*.
+    const visit = readVisit();
+    const utm: Record<string, string> = { ...(visit?.utm ?? {}) };
+    new URLSearchParams(window.location.search).forEach((v, k) => {
+      if (/^utm_[a-z_]+$/i.test(k) && v) utm[k.toLowerCase()] = v.slice(0, 200);
+    });
+    const extras = {
+      context: ctx,
+      referrer: visit?.referrer ?? (document.referrer && !document.referrer.startsWith(window.location.origin) ? document.referrer : ""),
+      landingPage: visit?.landingPage ?? window.location.pathname + window.location.search,
+      utm,
+    };
+
     try {
       const res = await fetch("/api/contact", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ ...payload, recaptchaToken }),
+        body: JSON.stringify({ ...payload, recaptchaToken, ...extras }),
       });
       const data = await res.json().catch(() => ({ ok: false }));
       if (!res.ok || !data.ok) {

@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ChangeEmailForm, ChangePasswordForm, MfaResetForm, ProfileForm, SessionsList, type SessionView } from "@/app/(admin)/_components/AccountForms";
+import { DigestForm } from "@/app/(admin)/_components/submissions/DigestForm";
 import { Alert, Badge, Card, PageHeader } from "@/app/(admin)/_components/ui/Basics";
 import { ButtonLink } from "@/app/(admin)/_components/ui/Button";
 import { Tabs } from "@/app/(admin)/_components/ui/Tabs";
 import { getCsrfToken, requirePageUser } from "@/lib/auth/current";
 import { recoveryCodesRemaining } from "@/lib/auth/flows";
-import { mfaRequired } from "@/lib/auth/rbac";
+import { can, mfaRequired } from "@/lib/auth/rbac";
 import { listActiveSessions } from "@/lib/auth/session";
 import { describeUserAgent } from "@/lib/auth/ua";
 
@@ -61,6 +62,11 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
                   <Card title="Email address" description="Your sign in address. Confirmed by a link sent to the new address.">
                     <ChangeEmailForm csrf={csrf} email={user.email} />
                   </Card>
+                  {can(user.role, "submissions:read") && (
+                    <Card title="Submission digest" description="Email you about new enquiries: as they arrive, once a day, or not at all.">
+                      <DigestForm csrf={csrf} initial={user.digest} />
+                    </Card>
+                  )}
                 </div>
               ),
             },

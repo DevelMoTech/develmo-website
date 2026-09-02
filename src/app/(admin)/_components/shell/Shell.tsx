@@ -18,11 +18,14 @@ const COLLAPSE_KEY = "dm_admin_sidebar";
 export function Shell({
   groups,
   tools,
+  badges = {},
   children,
 }: {
   groups: NavGroup[];
   // Server-rendered top bar tools (theme, notifications, user menu).
   tools: ReactNode;
+  // Unread counts by href, e.g. { "/admin/submissions": 3 }.
+  badges?: Record<string, number>;
   children: ReactNode;
 }) {
   const pathname = usePathname();
@@ -90,6 +93,11 @@ export function Shell({
                     >
                       <Icon name={item.icon} />
                       <span>{item.label}</span>
+                      {(badges[item.href] ?? 0) > 0 && (
+                        <span className="adm-side-badge" aria-label={`${badges[item.href]} unread`}>
+                          {badges[item.href]! > 99 ? "99+" : badges[item.href]}
+                        </span>
+                      )}
                     </Link>
                   </li>
                 ))}

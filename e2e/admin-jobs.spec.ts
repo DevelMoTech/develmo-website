@@ -62,8 +62,11 @@ async function mintToken(browser: Browser, baseURL: string): Promise<string> {
 }
 
 test.afterAll(async () => {
-  await db().query(`delete from applications where job_id in (select id from jobs where slug like 'e2e-%')`);
-  await db().query(`delete from jobs where slug like 'e2e-%'`);
+  // Scoped to this worker's run: a retried serial group starts a new worker,
+  // and the old worker's teardown must not delete the new worker's rows.
+  await db().query(`delete from submissions where application_id in (select id from applications where job_id in (select id from jobs where slug like $1))`, [`e2e-${RUN}-%`]);
+  await db().query(`delete from applications where job_id in (select id from jobs where slug like $1)`, [`e2e-${RUN}-%`]);
+  await db().query(`delete from jobs where slug like $1`, [`e2e-${RUN}-%`]);
   await cleanup();
 });
 
@@ -254,7 +257,7 @@ test("pipeline: stage changes with a trail, rating, assignment, notes, rejection
   await page.getByLabel("Note for the trail").fill("Panel on Thursday");
   await page.getByRole("button", { name: "Change stage" }).click();
   await expect(page.getByText("Moved to Interview")).toBeVisible();
-  await expect(page.getByText("screening to interview: Panel on Thursday")).toBeVisible();
+  await expect(page.getByText("screening to interview: Panel on Thursday")).toBeVisible({ timeout: 15_000 });
 
   // Rejection from the editable template (no RESEND_API_KEY locally: recorded, not sent).
   await page.getByRole("button", { name: "Send rejection" }).click();

@@ -180,7 +180,7 @@ export async function recentNotifications(role: Role): Promise<{ items: Notifica
       .where(and(gte(submissions.createdAt, since), eq(submissions.isSpam, false), eq(submissions.status, "new")))
       .orderBy(desc(submissions.createdAt))
       .limit(5);
-    for (const r of rows) items.push({ id: `s-${r.id}`, at: r.createdAt, title: `New ${r.kind}`, detail: r.name || r.email, when: relativeTime(r.createdAt), href: `/admin/submissions?q=${encodeURIComponent(r.email || r.name)}` });
+    for (const r of rows) items.push({ id: `s-${r.id}`, at: r.createdAt, title: `New ${r.kind}`, detail: r.name || r.email, when: relativeTime(r.createdAt), href: `/admin/submissions/${r.id}` });
   }
   if (can(role, "security:read")) {
     const rows = await db

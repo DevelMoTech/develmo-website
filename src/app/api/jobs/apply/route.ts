@@ -1,5 +1,9 @@
 import { after, NextResponse } from "next/server";
+import { eq } from "drizzle-orm";
+import { getDb } from "@/db";
+import { submissions } from "@/db/schema";
 import { createApplication, findOpenJob, sendAcknowledgement, storeCv } from "@/lib/admin/applications";
+import { notifyInstantDigest } from "@/lib/submissions/digest";
 import { getClientIp, hashIp } from "@/lib/auth/ip";
 import { securityEvent } from "@/lib/auth/log";
 import { MAX_CV_BYTES } from "@/lib/documents";
@@ -96,6 +100,13 @@ export async function POST(req: Request) {
       await sendAcknowledgement(app, job);
     } catch (err) {
       console.error("[apply] acknowledgement failed", err);
+    }
+    // Staff on the instant digest hear about applications too (brief §3.5).
+    try {
+      const inbox = (await getDb().select().from(submissions).where(eq(submissions.applicationId, app.id)).limit(1))[0];
+      if (inbox) await notifyInstantDigest(inbox);
+    } catch (err) {
+      console.error("[apply] instant digest failed", err);
     }
   });
 

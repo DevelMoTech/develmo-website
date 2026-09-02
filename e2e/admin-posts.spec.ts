@@ -58,9 +58,11 @@ async function upload(request: APIRequestContext, baseURL: string, csrf: string,
 }
 
 test.afterAll(async () => {
-  await db().query(`delete from posts where slug like 'e2e-%'`);
+  // Scoped to this worker's run: a retried serial group starts a new worker,
+  // and the old worker's teardown must not delete the new worker's rows.
+  await db().query(`delete from posts where slug like $1`, [`e2e-${RUN}-%`]);
   await db().query(`delete from media where filename like 'e2e-%'`);
-  await db().query(`delete from redirects where source like '%/e2e-%'`);
+  await db().query(`delete from redirects where source like $1`, [`%/e2e-${RUN}-%`]);
   await cleanup();
 });
 

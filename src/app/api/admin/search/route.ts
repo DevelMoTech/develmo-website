@@ -63,7 +63,7 @@ export const GET = adminRoute({ auth: "required" }, async ({ req, auth }) => {
       .where(or(ilike(submissions.name, needle), ilike(submissions.email, needle), ilike(submissions.company, needle)))
       .orderBy(desc(submissions.createdAt))
       .limit(5);
-    for (const r of rows) hits.push({ group: "Submissions", label: r.name || r.email, detail: r.company || r.email, href: `/admin/submissions?q=${encodeURIComponent(r.email || r.name)}` });
+    for (const r of rows) hits.push({ group: "Submissions", label: r.name || r.email, detail: r.company || r.email, href: `/admin/submissions/${r.id}` });
   }
   if (can(role, "users:read")) {
     const rows = await db

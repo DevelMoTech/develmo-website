@@ -1,6 +1,7 @@
 import { MegaNav } from "@/components/MegaNav";
 import { SiteFooter } from "@/components/SiteFooter";
 import { StickyCta } from "@/components/StickyCta";
+import { VisitCapture } from "@/components/VisitCapture";
 import { site } from "@/lib/site";
 import { getLocale } from "@/lib/i18n-server";
 
@@ -31,6 +32,7 @@ export async function SiteChrome({ children }: { children: React.ReactNode }) {
     <>
       <a href="#main" className="skip-link">Skip to content</a>
       <MegaNav locale={locale} />
+      <VisitCapture />
       <main id="main" tabIndex={-1}>{children}</main>
       <SiteFooter locale={locale} />
       <StickyCta locale={locale} />

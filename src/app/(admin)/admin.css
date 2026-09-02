@@ -710,3 +710,19 @@ button.adm-link { background: none; border: 0; padding: 0; font: inherit; font-w
 .adm-star:hover:not(:disabled) { border-color: var(--adm-warn); color: var(--adm-warn); }
 .adm-star-on { color: var(--adm-warn); border-color: var(--adm-warn); }
 .adm-star:disabled { cursor: not-allowed; opacity: .7; }
+
+/* Submissions inbox (phase 6) */
+.adm-side-badge { margin-inline-start: auto; min-inline-size: 22px; block-size: 22px; padding: 0 7px; border-radius: 11px; background: var(--adm-teal); color: #042521; font-size: 12px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; }
+.adm-shell[data-collapsed="true"] .adm-side-badge { position: absolute; inset-block-start: 4px; inset-inline-end: 6px; min-inline-size: 18px; block-size: 18px; font-size: 10.5px; padding: 0 5px; }
+.adm-thread { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.adm-thread-replies { margin-inline-start: 22px; padding-inline-start: 14px; border-inline-start: 2px solid var(--adm-line); margin-block-start: 8px; }
+.adm-note { background: var(--adm-surface-3); border-radius: 10px; padding: 10px 12px; font-size: 14px; }
+.adm-note p { margin: 0 0 4px; }
+
+.adm-shell[data-collapsed="true"] .adm-side-link .adm-side-badge { display: inline-flex; }
+.adm-message { font-size: 15.5px; color: var(--adm-text); margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.adm-note p { overflow-wrap: anywhere; white-space: pre-wrap; }
+.adm-page-head h1, .adm-modal-head h2 { overflow-wrap: anywhere; }
+.adm-dl dd .adm-error { overflow-wrap: anywhere; }
+
+.adm-side-link { position: relative; }

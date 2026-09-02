@@ -8,7 +8,8 @@ import { ButtonLink } from "@/app/(admin)/_components/ui/Button";
 import { staffOptions } from "@/app/(admin)/_lib/applications-query";
 import { loadApplication } from "@/lib/admin/applications";
 import { getTemplate } from "@/lib/admin/templates";
-import { getCsrfToken, requirePageUser } from "@/lib/auth/current";
+import { markReadForApplication } from "@/lib/admin/submissions";
+import { getClientIpHash, getCsrfToken, requirePageUser } from "@/lib/auth/current";
 import { can } from "@/lib/auth/rbac";
 
 export const metadata: Metadata = { title: "Application" };
@@ -29,6 +30,8 @@ export default async function ApplicationPage({ params }: { params: Promise<{ id
   const [csrf, staff, rejectionTemplate] = await Promise.all([getCsrfToken(), staffOptions(), getTemplate("application_rejection")]);
   const canWrite = can(user.role, "submissions:write");
   const canDelete = can(user.role, "users:manage");
+  // The inbox mirror of this application is read once the pipeline opens it.
+  if (canWrite) await markReadForApplication(id, { user, ipHash: await getClientIpHash() });
   const assignee = staff.find((s) => s.id === app.assigneeId)?.name ?? null;
 
   return (
@@ -50,7 +53,7 @@ export default async function ApplicationPage({ params }: { params: Promise<{ id
           <Card title="Applicant">
             <dl className="adm-dl">
               <dt>Email</dt>
-              <dd><a className="adm-link" href={`mailto:${app.email}`}>{app.email}</a></dd>
+              <dd><a className="adm-link" href={`mailto:${encodeURIComponent(app.email)}`}>{app.email}</a></dd>
               <dt>Phone</dt>
               <dd>{app.phone || <span className="adm-muted">not given</span>}</dd>
               <dt>Location</dt>

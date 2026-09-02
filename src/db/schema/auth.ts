@@ -24,6 +24,9 @@ export const users = pgTable("users", {
   status: userStatus("status").notNull().default("active"),
   avatarUrl: text("avatar_url"),
   themePref: text("theme_pref"),
+  // Submission digest preference: off | instant | daily (brief §3.5).
+  digest: text("digest").notNull().default("off"),
+  digestLastSentAt: timestamp("digest_last_sent_at", { withTimezone: true }),
   // TOTP secret encrypted at rest with AUTH_SECRET-derived key, null until enrolled.
   totpSecretEnc: text("totp_secret_enc"),
   totpEnabled: boolean("totp_enabled").notNull().default(false),
