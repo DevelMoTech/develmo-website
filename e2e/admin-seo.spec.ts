@@ -156,7 +156,10 @@ test("a redirect created in the console 301s on the next request, keeps the quer
   // The counter is database wide, so the strict bound only holds when no
   // other spec is running against the same database at the same time.
   // With parallel workers the figure is still printed for the record.
-  if (test.info().config.workers === 1) expect(delta).toBeLessThan(20);
+  // Noise floor: this test's own reads, one map refresh with the hit flush,
+  // statistics lag and the tail of the previous test's writes; a lookup per
+  // request would sit at 200 or more.
+  if (test.info().config.workers === 1) expect(delta).toBeLessThan(40);
   else console.log(`DB MEASUREMENT: ${test.info().config.workers} workers, other specs share the counter; strict bound not asserted`);
 
   // Hits are batched and flushed with the next map refresh, which the next
