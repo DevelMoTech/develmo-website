@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
+import { withSeoOverride } from "@/lib/meta";
 import { LegalPage } from "@/components/Legal";
 
-export const metadata: Metadata = {
+export const generateMetadata = (): Promise<Metadata> => withSeoOverride("/terms", {
   title: "Terms of Service",
   description: "The terms that govern your use of the DevelMo website.",
-};
+});
 
 export default function TermsPage() {
   return (

@@ -8,7 +8,7 @@ import { getLocale } from "@/lib/i18n-server";
 import { t, loc } from "@/lib/i18n";
 import { pageMeta } from "@/lib/meta";
 
-export const metadata: Metadata = pageMeta({
+export const generateMetadata = (): Promise<Metadata> => pageMeta({
   title: "What We Do",
   description:
     "Six service pillars and 21 capabilities across AI, data, computer vision, web and mobile, cloud, DevOps, security and staff augmentation.",

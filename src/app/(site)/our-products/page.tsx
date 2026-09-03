@@ -7,7 +7,7 @@ import { getLocale } from "@/lib/i18n-server";
 import { t, loc } from "@/lib/i18n";
 import { pageMeta } from "@/lib/meta";
 
-export const metadata: Metadata = pageMeta({
+export const generateMetadata = (): Promise<Metadata> => pageMeta({
   title: "Our Products",
   description:
     "DevelMo products: CrowdIQ video analytics, OmniRoad 2.0 road safety, and PadelIQ sports and padel analytics.",

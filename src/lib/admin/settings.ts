@@ -2,6 +2,9 @@ import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { getDb } from "@/db";
 import { settings } from "@/db/schema";
+import { DEFAULT_ORGANIZATION_FACTS } from "@/lib/seo/organization";
+import { DEFAULT_ROBOTS_BODY } from "@/lib/seo/robots";
+import { organizationFactsSchema, robotsBodySchema } from "@/lib/schemas/seo";
 
 // Key-value settings (brief §3.11) with a zod schema per key. Reads fall back
 // to the default on a missing row or a database error, so the site never
@@ -25,13 +28,26 @@ export const DEFAULT_REPLY_TEMPLATE: ReplyTemplate = {
   body: ["Hi {{first_name}},", "", "Thanks for getting in touch about {{service}}.", "", "", "Best regards,", "", "DevelMo"].join("\n"),
 };
 
+// SEO manager (brief §3.6).
+export const sitemapStateSchema = z.object({
+  generatedAt: z.string().nullable(),
+  urls: z.number().int().min(0),
+});
+export type SitemapState = z.infer<typeof sitemapStateSchema>;
+
 const SCHEMAS = {
   retention: retentionSchema,
   reply_template: replyTemplateSchema,
+  robots: robotsBodySchema,
+  org_schema: organizationFactsSchema,
+  sitemap_state: sitemapStateSchema,
 } as const;
 const DEFAULTS: { [K in keyof typeof SCHEMAS]: z.infer<(typeof SCHEMAS)[K]> } = {
   retention: DEFAULT_RETENTION,
   reply_template: DEFAULT_REPLY_TEMPLATE,
+  robots: { body: DEFAULT_ROBOTS_BODY },
+  org_schema: DEFAULT_ORGANIZATION_FACTS,
+  sitemap_state: { generatedAt: null, urls: 0 },
 };
 export type SettingKey = keyof typeof SCHEMAS;
 
@@ -61,4 +77,13 @@ export async function setSetting<K extends SettingKey>(key: K, value: z.infer<(t
     .insert(settings)
     .values({ key, value, updatedById: actorId })
     .onConflictDoUpdate({ target: settings.key, set: { value, updatedById: actorId, updatedAt: sql`now()` } });
+}
+
+// Removes the row so the default applies again.
+export async function clearSetting(key: SettingKey): Promise<void> {
+  await getDb().delete(settings).where(eq(settings.key, key));
+}
+
+export function settingDefault<K extends SettingKey>(key: K): z.infer<(typeof SCHEMAS)[K]> {
+  return DEFAULTS[key];
 }

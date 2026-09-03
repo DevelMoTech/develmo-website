@@ -1,14 +1,15 @@
 import type { Metadata } from "next";
+import { withSeoOverride } from "@/lib/meta";
 import { PageHero } from "@/components/PageHero";
 import { CtaBand } from "@/components/CtaBand";
 import { getLocale } from "@/lib/i18n-server";
 import { t } from "@/lib/i18n";
 
-export const metadata: Metadata = {
+export const generateMetadata = (): Promise<Metadata> => withSeoOverride("/case-studies", {
   title: "Case Studies",
   description:
     "Representative outcomes from DevelMo engagements across retail, healthcare, banking and more. Detailed case studies are added as clients approve.",
-};
+});
 
 const snapshots = [
   { industry: "Retail & CPG", title: "Footfall analytics with CrowdIQ", body: "Turned existing store cameras into footfall, dwell and demographic dashboards, with no new hardware." },

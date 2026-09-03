@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { withSeoOverride } from "@/lib/meta";
 import Link from "next/link";
 import { PageHero } from "@/components/PageHero";
 import { CtaBand } from "@/components/CtaBand";
@@ -7,11 +8,11 @@ import { getPosts } from "@/lib/repo/posts";
 import { getLocale } from "@/lib/i18n-server";
 import { t } from "@/lib/i18n";
 
-export const metadata: Metadata = {
+export const generateMetadata = (): Promise<Metadata> => withSeoOverride("/our-knowledge-base", {
   title: "Knowledge Base",
   description:
     "Guides, insights and practical resources on AI, computer vision, cloud and building software that ships.",
-};
+});
 
 const topics = [
   { t: "AI & Data", d: "Generative AI, predictive models and data strategy." },

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
+import type { NextFetchEvent, NextRequest } from "next/server";
+import { matchRedirect, REDIRECT_TTL_MS, redirectTarget, type RedirectMap } from "@/lib/seo/redirect-map";
 
 const SESSION_COOKIE = "__Host-dm_session";
 const CSRF_COOKIE = "__Host-dm_csrf";
@@ -14,6 +15,60 @@ const PUBLIC_ADMIN_PAGES = new Set([
 
 const PREVIEW_PATH = /^\/admin\/posts\/[^/]+\/preview\/?$/;
 
+// Database redirects (brief §3.6). The map lives in this instance's memory
+// and is refreshed from /api/seo/redirects at most once per TTL, in the
+// background after the response, so a public request never waits on a
+// lookup and never touches the database. The only blocking fetch is the
+// very first request an instance serves. Hits are counted here and flushed
+// in the same refresh call. A new or changed rule is live everywhere within
+// one TTL of being saved.
+
+const REDIRECT_FETCH_TIMEOUT_MS = 3_000;
+
+type RedirectCache = { map: RedirectMap | null; fetchedAt: number; inflight: Promise<void> | null };
+const redirectCache: RedirectCache = { map: null, fetchedAt: 0, inflight: null };
+const pendingHits = new Map<string, number>();
+
+async function refreshRedirects(origin: string): Promise<void> {
+  if (redirectCache.inflight) return redirectCache.inflight;
+  const run = (async () => {
+    const secret = process.env.CRON_SECRET;
+    const hits = Object.fromEntries(pendingHits);
+    const flush = secret && secret.length >= 16 && pendingHits.size > 0;
+    if (flush) pendingHits.clear();
+    try {
+      const res = await fetch(`${origin}/api/seo/redirects`, {
+        method: flush ? "POST" : "GET",
+        headers: flush ? { authorization: `Bearer ${secret}`, "content-type": "application/json" } : undefined,
+        body: flush ? JSON.stringify({ hits }) : undefined,
+        cache: "no-store",
+        signal: AbortSignal.timeout(REDIRECT_FETCH_TIMEOUT_MS),
+      });
+      if (!res.ok) throw new Error(`redirect map ${res.status}`);
+      const map = (await res.json()) as RedirectMap;
+      if (map && typeof map === "object" && map.rules && typeof map.rules === "object") {
+        redirectCache.map = map;
+      }
+      redirectCache.fetchedAt = Date.now();
+    } catch (err) {
+      // Keep serving the last good map (a 503 means the database could not
+      // be read; an empty map must not replace real rules). A cold instance
+      // with no map yet serves none and retries within two seconds instead
+      // of waiting a whole TTL.
+      if (flush) for (const [k, v] of Object.entries(hits)) pendingHits.set(k, (pendingHits.get(k) ?? 0) + v);
+      console.error("[proxy] redirect map refresh failed:", err instanceof Error ? err.message : err);
+      if (!redirectCache.map) redirectCache.map = { rules: {}, generatedAt: new Date(0).toISOString() };
+      redirectCache.fetchedAt = Date.now() - REDIRECT_TTL_MS + 2_000;
+    }
+  })();
+  redirectCache.inflight = run;
+  try {
+    await run;
+  } finally {
+    redirectCache.inflight = null;
+  }
+}
+
 function randomToken(): string {
   const bytes = new Uint8Array(32);
   crypto.getRandomValues(bytes);
@@ -22,10 +77,34 @@ function randomToken(): string {
   return s;
 }
 
-export function proxy(req: NextRequest) {
+export async function proxy(req: NextRequest, event: NextFetchEvent) {
   const { pathname, search } = req.nextUrl;
   const isAdminPage = pathname === "/admin" || pathname.startsWith("/admin/");
   const isAdminApi = pathname.startsWith("/api/admin/");
+  const isApi = pathname.startsWith("/api/");
+
+  // Keep non-production hosts (Vercel preview + the *.vercel.app production URL)
+  // out of search indexes so they don't compete with develmo.com as duplicates.
+  // Once the custom domain is live, requests to develmo.com are indexed normally.
+  const host = (req.headers.get("host") || "").toLowerCase();
+  const isLiveDomain = host === "develmo.com" || host.endsWith(".develmo.com");
+
+  // Public pages only: the console and the API are never redirected.
+  if (!isAdminPage && !isApi && (req.method === "GET" || req.method === "HEAD")) {
+    const origin = req.nextUrl.origin;
+    if (!redirectCache.map) {
+      await refreshRedirects(origin);
+    } else if (Date.now() - redirectCache.fetchedAt > REDIRECT_TTL_MS && !redirectCache.inflight) {
+      event.waitUntil(refreshRedirects(origin));
+    }
+    const rule = matchRedirect(redirectCache.map, pathname);
+    if (rule) {
+      pendingHits.set(rule.source, (pendingHits.get(rule.source) ?? 0) + 1);
+      const out = NextResponse.redirect(redirectTarget(rule, origin, search), rule.code);
+      if (!isLiveDomain) out.headers.set("X-Robots-Tag", "noindex, nofollow");
+      return out;
+    }
+  }
 
   // Draft previews must not reveal a post exists: no session cookie means a
   // plain 404, never a login redirect. The page itself repeats the check.
@@ -83,11 +162,6 @@ export function proxy(req: NextRequest) {
     res.headers.set("X-Robots-Tag", "noindex, nofollow");
   }
 
-  // Keep non-production hosts (Vercel preview + the *.vercel.app production URL)
-  // out of search indexes so they don't compete with develmo.com as duplicates.
-  // Once the custom domain is live, requests to develmo.com are indexed normally.
-  const host = (req.headers.get("host") || "").toLowerCase();
-  const isLiveDomain = host === "develmo.com" || host.endsWith(".develmo.com");
   if (!isLiveDomain) {
     res.headers.set("X-Robots-Tag", "noindex, nofollow");
   }

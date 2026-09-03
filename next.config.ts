@@ -56,6 +56,14 @@ const nextConfig: NextConfig = {
   // live dev server. Unset (Vercel, plain `npm run build`) keeps the default.
   distDir: process.env.NEXT_DIST_DIR ?? ".next",
   poweredByHeader: false,
+  // Every page resolves its metadata from the SEO overrides cache (Phase 7).
+  // Next streams metadata into <body> for browsers when generateMetadata is
+  // not settled by the time the shell is sent; treating every user agent as
+  // an HTML-limited bot keeps <title>, <meta> and <link rel=canonical> in
+  // <head> on every request, exactly as the static metadata objects did.
+  // Blocking costs only the cached lookup, which is a memory hit after the
+  // first request per route.
+  htmlLimitedBots: /.*/,
   async headers() {
     return [
       {

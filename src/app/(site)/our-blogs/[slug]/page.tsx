@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { withSeoOverride } from "@/lib/meta";
 import { notFound } from "next/navigation";
 import { PostArticle, postMetadata } from "@/components/PostArticle";
 import { getLocale } from "@/lib/i18n-server";
@@ -16,7 +17,7 @@ export async function generateMetadata({
   const { slug } = await params;
   const post = await getPost(slug, "blog", await getLocale());
   if (!post) return {};
-  return postMetadata(post);
+  return withSeoOverride(`/our-blogs/${post.slug}`, postMetadata(post));
 }
 
 export default async function PostPage({ params }: { params: Promise<{ slug: string }> }) {

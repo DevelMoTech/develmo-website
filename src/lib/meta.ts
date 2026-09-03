@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { getSeoOverride, type SeoOverride } from "@/lib/seo/overrides";
+import { site } from "@/lib/site";
 
 // Per-page metadata helper: drives canonical + Open Graph + Twitter from the
 // page's own title/description so shared links no longer all preview as the
@@ -16,11 +18,16 @@ export const OG_IMAGE = {
   alt: "DevelMo, AI that fits your business",
 };
 
-export function pageMeta(opts: {
+export type PageMetaInput = {
   title: string;
   description: string;
   path: string;
-}): Metadata {
+};
+
+// The hardcoded shape, unchanged from before the SEO manager existed. Pages
+// call pageMeta() below, which layers any override from /admin/seo/pages on
+// top of this.
+export function basePageMeta(opts: PageMetaInput): Metadata {
   const ogTitle = `${opts.title} | DevelMo`;
   return {
     title: opts.title,
@@ -41,4 +48,89 @@ export function pageMeta(opts: {
       images: [OG_IMAGE.url],
     },
   };
+}
+
+const LAYOUT_TITLE = "DevelMo: AI That Fits Your Business";
+
+function baseTitle(base: Metadata): string | null {
+  const t = base.title;
+  if (typeof t === "string") return t;
+  if (t && typeof t === "object" && "absolute" in t && typeof t.absolute === "string") return t.absolute;
+  if (t && typeof t === "object" && "default" in t && typeof t.default === "string") return t.default;
+  return null;
+}
+
+function baseRobots(base: Metadata): { index: boolean; follow: boolean } {
+  const r = base.robots;
+  if (r && typeof r === "object") return { index: r.index !== false, follow: r.follow !== false };
+  if (typeof r === "string") return { index: !/noindex/i.test(r), follow: !/nofollow/i.test(r) };
+  return { index: true, follow: true };
+}
+
+// Applies a per-route override (brief §3.6) to a page's metadata. Every
+// field is independent: a null field in the override leaves the hardcoded
+// value alone, and no override row at all returns `base` untouched, so the
+// served <head> is byte identical to before for every route without one.
+//
+// Pages that never declared Open Graph or Twitter data (they inherit the
+// root layout's) get a complete block built from their effective title and
+// description when an override touches one of those fields, because a page
+// level openGraph object replaces the layout's rather than merging with it.
+export function applySeoOverride(base: Metadata, o: SeoOverride | null, path?: string): Metadata {
+  if (!o) return base;
+  const out: Metadata = { ...base };
+  const touchesSocial = !!(o.metaTitle || o.metaDescription || o.ogImage);
+  const effectiveTitle = o.metaTitle ?? baseTitle(base);
+  const ogTitle = effectiveTitle ? (path === "/" && !o.metaTitle ? LAYOUT_TITLE : `${effectiveTitle} | DevelMo`) : LAYOUT_TITLE;
+  const effectiveDescription = o.metaDescription ?? (typeof base.description === "string" ? base.description : site.description);
+
+  const og = base.openGraph
+    ? { ...base.openGraph }
+    : touchesSocial
+      ? { type: "website" as const, siteName: "DevelMo", url: path ?? o.path, title: ogTitle, description: effectiveDescription, images: [OG_IMAGE] }
+      : undefined;
+  const tw = base.twitter
+    ? { ...base.twitter }
+    : touchesSocial
+      ? { card: "summary_large_image" as const, title: ogTitle, description: effectiveDescription, images: [OG_IMAGE.url] }
+      : undefined;
+
+  if (o.metaTitle) {
+    // The home page's title is the whole <title> (the layout's default has
+    // no site suffix); every other page goes through the "%s | DevelMo"
+    // template, which the console's preview and counter mirror.
+    const isHome = (path ?? o.path) === "/";
+    out.title = isHome ? { absolute: o.metaTitle } : o.metaTitle;
+    const social = isHome ? o.metaTitle : `${o.metaTitle} | DevelMo`;
+    if (og) og.title = social;
+    if (tw) tw.title = social;
+  }
+  if (o.metaDescription) {
+    out.description = o.metaDescription;
+    if (og) og.description = o.metaDescription;
+    if (tw) tw.description = o.metaDescription;
+  }
+  if (o.canonical) out.alternates = { ...(base.alternates ?? {}), canonical: o.canonical };
+  if (o.ogImage) {
+    const image = { url: o.ogImage.url, width: o.ogImage.width ?? undefined, height: o.ogImage.height ?? undefined, alt: o.ogImage.alt || undefined };
+    if (og) og.images = [image];
+    if (tw) tw.images = [o.ogImage.url];
+  }
+  if (og) out.openGraph = og;
+  if (tw) out.twitter = tw;
+  if (o.noindex || o.nofollow) {
+    // A noindex set in the post or job editor stays in force; the override
+    // can only add restrictions.
+    const current = baseRobots(base);
+    out.robots = { index: current.index && !o.noindex, follow: current.follow && !o.nofollow };
+  }
+  return out;
+}
+
+export async function withSeoOverride(path: string, base: Metadata): Promise<Metadata> {
+  return applySeoOverride(base, await getSeoOverride(path), path);
+}
+
+export async function pageMeta(opts: PageMetaInput): Promise<Metadata> {
+  return withSeoOverride(opts.path, basePageMeta(opts));
 }

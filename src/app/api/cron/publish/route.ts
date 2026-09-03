@@ -17,9 +17,9 @@ export const dynamic = "force-dynamic";
 function authorised(req: Request): boolean {
   const secret = process.env.CRON_SECRET;
   if (!secret || secret.length < 16) return false;
-  const header = req.headers.get("authorization") ?? "";
-  const expected = `Bearer ${secret}`;
-  return header.length === expected.length && timingSafeEqual(Buffer.from(header), Buffer.from(expected));
+  const header = Buffer.from(req.headers.get("authorization") ?? "");
+  const expected = Buffer.from(`Bearer ${secret}`);
+  return header.byteLength === expected.byteLength && timingSafeEqual(header, expected);
 }
 
 export async function GET(req: Request) {

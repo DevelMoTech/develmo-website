@@ -726,3 +726,24 @@ button.adm-link { background: none; border: 0; padding: 0; font: inherit; font-w
 .adm-dl dd .adm-error { overflow-wrap: anywhere; }
 
 .adm-side-link { position: relative; }
+
+/* ---- SEO manager (Phase 7) ---- */
+.adm-tab[aria-current="page"] { color: var(--adm-primary-ink); border-block-end-color: var(--adm-primary); }
+.adm-tabs a.adm-tab { text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; }
+.adm-counter { font-size: 12px; color: var(--adm-muted); text-align: end; margin: 4px 0 0; font-variant-numeric: tabular-nums; }
+.adm-counter-over { color: var(--adm-danger); font-weight: 600; }
+.adm-serp { border: var(--adm-border-w) solid var(--adm-line); border-radius: 12px; padding: 14px 16px; background: var(--adm-surface); max-inline-size: 600px; font-family: Arial, Helvetica, sans-serif; }
+.adm-serp-site { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--adm-muted); }
+.adm-serp-favicon { inline-size: 26px; block-size: 26px; border-radius: 50%; background: var(--adm-surface-3); display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: var(--adm-ink); }
+.adm-serp-url { overflow-wrap: anywhere; }
+.adm-serp-title { margin: 6px 0 2px; font-size: 20px; line-height: 1.3; color: var(--adm-primary-ink); font-weight: 400; overflow-wrap: anywhere; }
+.adm-serp-desc { margin: 0; font-size: 14px; line-height: 1.45; color: var(--adm-ink); overflow-wrap: anywhere; }
+.adm-pre { margin: 0; padding: 12px 14px; border-radius: 10px; background: var(--adm-surface-3); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; max-block-size: 420px; overflow: auto; }
+.adm-seo-flags { display: flex; flex-wrap: wrap; gap: 4px; }
+.adm-seo-path { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; overflow-wrap: anywhere; }
+.adm-inline-form { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; }
+.adm-inline-form .adm-field { margin: 0; min-inline-size: 140px; flex: 1 1 160px; }
+.adm-delta-up { color: var(--adm-danger); font-weight: 600; }
+.adm-delta-down { color: var(--adm-success); font-weight: 600; }
+.adm-code-field .adm-input { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; line-height: 1.5; }
+.adm-finding-detail { font-size: 13px; color: var(--adm-muted); overflow-wrap: anywhere; }

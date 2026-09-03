@@ -8,7 +8,7 @@ import { getLocale } from "@/lib/i18n-server";
 import { t, loc } from "@/lib/i18n";
 import { pageMeta } from "@/lib/meta";
 
-export const metadata: Metadata = pageMeta({
+export const generateMetadata = (): Promise<Metadata> => pageMeta({
   title: "Who We Help",
   description:
     "Domain-aware AI, software and automation for healthcare, telecom, energy, hospitality, e-commerce, banking, public sector, retail, startups and gaming.",

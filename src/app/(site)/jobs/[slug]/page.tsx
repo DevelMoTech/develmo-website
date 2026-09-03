@@ -8,7 +8,7 @@ import { t } from "@/lib/i18n";
 import { buildJobPosting, validateJobPosting } from "@/lib/jobposting";
 import { EMPLOYMENT_TYPES, labelFor, officeByCode, REMOTE_POLICIES, salaryParts, SENIORITIES } from "@/lib/jobs-shared";
 import { markdownToHtml, renderMarkdown } from "@/lib/markdown";
-import { OG_IMAGE } from "@/lib/meta";
+import { OG_IMAGE, withSeoOverride } from "@/lib/meta";
 import { formatDate } from "@/lib/posts";
 import { getOpenJob } from "@/lib/repo/jobs";
 import { plainExcerpt } from "@/lib/slug";
@@ -26,14 +26,14 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const title = job.seo.metaTitle ?? job.title;
   const description = job.seo.metaDescription ?? plainExcerpt(job.summaryMd, 155);
   const path = `/jobs/${job.slug}`;
-  return {
+  return withSeoOverride(path, {
     title,
     description,
     ...(job.seo.noindex ? { robots: { index: false, follow: true } } : {}),
     alternates: { canonical: job.seo.canonical ?? path },
     openGraph: { type: "website", siteName: "DevelMo", url: path, title: `${title} | DevelMo`, description, images: [OG_IMAGE] },
     twitter: { card: "summary_large_image", title: `${title} | DevelMo`, description, images: [OG_IMAGE.url] },
-  };
+  });
 }
 
 export default async function JobPage({ params }: { params: Promise<{ slug: string }> }) {

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { LegalPage } from "@/components/Legal";
 import { pageMeta } from "@/lib/meta";
 
-export const metadata: Metadata = pageMeta({
+export const generateMetadata = (): Promise<Metadata> => pageMeta({
   title: "Privacy Policy",
   description: "How DevelMo collects, uses and protects your personal data.",
   path: "/privacy",

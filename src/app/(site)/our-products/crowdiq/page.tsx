@@ -1,15 +1,16 @@
 import type { Metadata } from "next";
+import { withSeoOverride } from "@/lib/meta";
 import { Button } from "@/components/ui";
 import { CtaBand } from "@/components/CtaBand";
 import { HeroDashboard } from "@/components/Dashboard";
 import { getLocale } from "@/lib/i18n-server";
 import { t } from "@/lib/i18n";
 
-export const metadata: Metadata = {
+export const generateMetadata = (): Promise<Metadata> => withSeoOverride("/our-products/crowdiq", {
   title: "CrowdIQ — AI Video Analytics",
   description:
     "CrowdIQ turns existing cameras into AI-powered business intelligence: visitor detection, tracking IDs, dwell time, heatmaps and reports. Connects to RTSP, ONVIF, HTTP and local cameras.",
-};
+});
 
 const features = [
   { t: "Camera connectivity", d: "RTSP, ONVIF, HTTP, local cameras and webcams. No new hardware." },

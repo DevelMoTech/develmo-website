@@ -79,6 +79,8 @@ const SEGMENT_LABELS: Record<string, string> = {
   pages: "Pages",
   redirects: "Redirects",
   schema: "Structured data",
+  sitemap: "Sitemap",
+  robots: "robots.txt",
   audit: "Audit",
   events: "Events",
   access: "Access control",

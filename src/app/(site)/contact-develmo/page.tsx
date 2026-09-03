@@ -6,7 +6,7 @@ import { getLocale } from "@/lib/i18n-server";
 import { t } from "@/lib/i18n";
 import { pageMeta } from "@/lib/meta";
 
-export const metadata: Metadata = pageMeta({
+export const generateMetadata = (): Promise<Metadata> => pageMeta({
   title: "Contact DevelMo",
   description:
     "Book a free consultation with DevelMo. Tell us about your AI, automation or software project and we will reply within one business day.",

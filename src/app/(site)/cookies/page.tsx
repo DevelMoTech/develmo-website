@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
+import { withSeoOverride } from "@/lib/meta";
 import { LegalPage } from "@/components/Legal";
 
-export const metadata: Metadata = {
+export const generateMetadata = (): Promise<Metadata> => withSeoOverride("/cookies", {
   title: "Cookie Policy",
   description: "How DevelMo uses cookies and similar technologies on this website.",
-};
+});
 
 export default function CookiesPage() {
   return (

@@ -5,6 +5,8 @@ import { audit } from "@/lib/auth/log";
 import type { UserRow } from "@/lib/auth/session";
 import { POST_BASE_PATH, type PostType } from "@/lib/repo/posts";
 import { revalidatePosts } from "@/lib/repo/revalidate";
+import { revalidateTag } from "next/cache";
+import { REDIRECTS_TAG } from "@/lib/seo/redirect-map";
 import { TRANSLATION_LOCALES, type PostInput, type TranslationLocale } from "@/lib/schemas/post";
 import { readingTimeMinutes } from "@/lib/slug";
 
@@ -241,6 +243,7 @@ async function upsertRedirect(source: string, destination: string, note: string,
     .values({ source, destination, code: 301, enabled: true, note, createdById: actor.user.id })
     .onConflictDoUpdate({ target: redirects.source, set: { destination, code: 301, enabled: true, note, updatedAt: sql`now()` } });
   await audit({ actorId: actor.user.id, actorEmail: actor.user.email, action: "redirect.create", entityType: "redirect", entityId: source, after: { source, destination, code: 301 }, ipHash: actor.ipHash });
+  revalidateTag(REDIRECTS_TAG, { expire: 0 });
 }
 
 export async function deletePosts(ids: string[], actor: Actor): Promise<{ deleted: number }> {

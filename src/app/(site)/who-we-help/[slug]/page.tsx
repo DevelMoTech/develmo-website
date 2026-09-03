@@ -6,6 +6,8 @@ import { getIndustries, getIndustry } from "@/lib/repo/industries";
 import { getLocale } from "@/lib/i18n-server";
 import { t, loc } from "@/lib/i18n";
 import { pageMeta } from "@/lib/meta";
+import { faqSchemaEnabled } from "@/lib/seo/overrides";
+import { jsonLd } from "@/lib/jsonld";
 
 export async function generateStaticParams() {
   const industries = await getIndustries();
@@ -25,6 +27,7 @@ export async function generateMetadata({
 
 export default async function IndustryPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
+  const faqSchema = await faqSchemaEnabled(`/who-we-help/${slug}`);
   const base = await getIndustry(slug);
   if (!base) notFound();
   const locale = await getLocale();
@@ -91,20 +94,22 @@ export default async function IndustryPage({ params }: { params: Promise<{ slug:
               ))}
             </div>
           </div>
-          <script
-            type="application/ld+json"
-            dangerouslySetInnerHTML={{
-              __html: JSON.stringify({
-                "@context": "https://schema.org",
-                "@type": "FAQPage",
-                mainEntity: i.faqs.map((f) => ({
-                  "@type": "Question",
-                  name: f.q,
-                  acceptedAnswer: { "@type": "Answer", text: f.a },
-                })),
-              }),
-            }}
-          />
+          {faqSchema && (
+            <script
+              type="application/ld+json"
+              dangerouslySetInnerHTML={{
+                __html: jsonLd({
+                  "@context": "https://schema.org",
+                  "@type": "FAQPage",
+                  mainEntity: i.faqs.map((f) => ({
+                    "@type": "Question",
+                    name: f.q,
+                    acceptedAnswer: { "@type": "Answer", text: f.a },
+                  })),
+                }),
+              }}
+            />
+          )}
         </section>
       )}
 

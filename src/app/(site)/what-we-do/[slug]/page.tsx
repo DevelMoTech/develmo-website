@@ -7,6 +7,8 @@ import { getPillar, getService, getServices, getServicesByPillar } from "@/lib/r
 import { getLocale } from "@/lib/i18n-server";
 import { t, loc } from "@/lib/i18n";
 import { pageMeta } from "@/lib/meta";
+import { faqSchemaEnabled } from "@/lib/seo/overrides";
+import { jsonLd } from "@/lib/jsonld";
 
 export async function generateStaticParams() {
   const services = await getServices();
@@ -26,6 +28,7 @@ export async function generateMetadata({
 
 export default async function ServicePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
+  const faqSchema = await faqSchemaEnabled(`/what-we-do/${slug}`);
   const base = await getService(slug);
   if (!base) notFound();
   const locale = await getLocale();
@@ -123,20 +126,22 @@ export default async function ServicePage({ params }: { params: Promise<{ slug: 
               ))}
             </div>
           </div>
-          <script
-            type="application/ld+json"
-            dangerouslySetInnerHTML={{
-              __html: JSON.stringify({
-                "@context": "https://schema.org",
-                "@type": "FAQPage",
-                mainEntity: s.faqs.map((f) => ({
-                  "@type": "Question",
-                  name: f.q,
-                  acceptedAnswer: { "@type": "Answer", text: f.a },
-                })),
-              }),
-            }}
-          />
+          {faqSchema && (
+            <script
+              type="application/ld+json"
+              dangerouslySetInnerHTML={{
+                __html: jsonLd({
+                  "@context": "https://schema.org",
+                  "@type": "FAQPage",
+                  mainEntity: s.faqs.map((f) => ({
+                    "@type": "Question",
+                    name: f.q,
+                    acceptedAnswer: { "@type": "Answer", text: f.a },
+                  })),
+                }),
+              }}
+            />
+          )}
         </section>
       )}
 

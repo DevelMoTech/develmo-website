@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { withSeoOverride } from "@/lib/meta";
 import Link from "next/link";
 import { PageHero } from "@/components/PageHero";
 import { CtaBand } from "@/components/CtaBand";
@@ -8,11 +9,11 @@ import { EMPLOYMENT_TYPES, labelFor, officeByCode } from "@/lib/jobs-shared";
 import { getOpenJobs } from "@/lib/repo/jobs";
 import { plainExcerpt } from "@/lib/slug";
 
-export const metadata: Metadata = {
+export const generateMetadata = (): Promise<Metadata> => withSeoOverride("/jobs", {
   title: "Careers",
   description:
     "Build real AI products with a distributed, senior team. DevelMo is always interested in AI/ML, computer vision, full-stack and DevOps engineers.",
-};
+});
 
 const perks = [
   { title: "Real AI products", body: "Work on computer vision, LLMs and automation that runs in production for real clients." },

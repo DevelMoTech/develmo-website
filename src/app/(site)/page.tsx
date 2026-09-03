@@ -8,6 +8,11 @@ import { getPillars } from "@/lib/repo/services";
 import { getIndustries } from "@/lib/repo/industries";
 import { getLocale } from "@/lib/i18n-server";
 import { t, loc } from "@/lib/i18n";
+import { withSeoOverride } from "@/lib/meta";
+
+// The home page's metadata lives in the root layout; only an override from
+// /admin/seo/pages changes it.
+export const generateMetadata = () => withSeoOverride("/", {});
 
 const why = [
   { icon: "custom", title: "Custom that fits", body: "Solutions shaped around your data, goals and operations, never forced into a template." },

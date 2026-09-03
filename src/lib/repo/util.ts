@@ -53,7 +53,8 @@ export async function repoQuery<T>(opts: {
   keys: string[];
   // Cache tags for on-demand revalidation, e.g. ["posts"].
   tags: string[];
-  revalidate?: number;
+  // Seconds, or false for tag-only invalidation (no time-based expiry).
+  revalidate?: number | false;
   query: () => Promise<T>;
   fallback: () => T;
 }): Promise<T> {

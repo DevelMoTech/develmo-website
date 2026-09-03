@@ -50,6 +50,20 @@
       "when": 1788383109446,
       "tag": "0006_phase6_application_idx",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1788454833871,
+      "tag": "0007_phase7_seo",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1788463138472,
+      "tag": "0008_phase7_audit_lock",
+      "breakpoints": true
     }
   ]
 }

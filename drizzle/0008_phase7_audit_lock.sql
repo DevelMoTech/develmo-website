@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "seo_audits_one_running_idx" ON "seo_audits" USING btree ("status") WHERE "seo_audits"."status" = 'running';

@@ -13,7 +13,7 @@ import { pageMeta } from "@/lib/meta";
 // body reads the repo with the file as fallback.
 const cEn = aboutContent["who-we-are"];
 
-export const metadata: Metadata = pageMeta({
+export const generateMetadata = (): Promise<Metadata> => pageMeta({
   title: "Who We Are",
   description: cEn.lead,
   path: "/who-we-are",

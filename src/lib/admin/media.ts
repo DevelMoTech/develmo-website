@@ -1,7 +1,9 @@
 import { randomBytes } from "node:crypto";
+import { revalidateTag } from "next/cache";
+import { SEO_TAG, seoPathTag } from "@/lib/seo/overrides";
 import { and, asc, count, desc, eq, ilike, inArray, or, sql, type SQL } from "drizzle-orm";
 import { getDb } from "@/db";
-import { media, posts } from "@/db/schema";
+import { media, posts, seoOverrides } from "@/db/schema";
 import { apiError } from "@/lib/auth/api";
 import { audit, securityEvent } from "@/lib/auth/log";
 import type { UserRow } from "@/lib/auth/session";
@@ -192,7 +194,13 @@ export async function deleteMedia(id: string, actor: Actor): Promise<{ ok: true 
   if (!current) return { ok: false, code: "not_found" };
   const usage = (await mediaUsage([current])).get(id) ?? [];
   if (usage.length > 0) return { ok: false, code: "in_use", usage };
+  // Metadata overrides that used this file as their Open Graph image fall
+  // back to the default artwork (the reference is set null by the schema);
+  // their cached pages must not keep the old og:image.
+  const overridePaths = (await db.select({ path: seoOverrides.path }).from(seoOverrides).where(eq(seoOverrides.ogImageId, id))).map((r) => r.path);
   await db.delete(media).where(eq(media.id, id));
+  for (const p of overridePaths) revalidateTag(seoPathTag(p), { expire: 0 });
+  if (overridePaths.length) revalidateTag(SEO_TAG, { expire: 0 });
   await deleteObject(current.blobKey).catch((err) => console.error("[media] object delete failed", current.blobKey, err));
   await audit({ actorId: actor.user.id, actorEmail: actor.user.email, action: "media.delete", entityType: "media", entityId: id, before: toView(current), ipHash: actor.ipHash });
   return { ok: true };
