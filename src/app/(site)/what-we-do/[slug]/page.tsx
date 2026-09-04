@@ -51,7 +51,7 @@ export default async function ServicePage({ params }: { params: Promise<{ slug: 
 
       <section className="section">
         <div className="container">
-          <div className="kicker">{pillar?.title}</div>
+          <div className="kicker">{pillar ? tr(pillar.title) : null}</div>
           <h2 className="h2">{tr("What we deliver")}</h2>
           <p className="lead">{s.intro}</p>
           <ul className="feat-light" style={{ marginTop: 26 }}>
@@ -94,7 +94,7 @@ export default async function ServicePage({ params }: { params: Promise<{ slug: 
       {related.length > 0 && (
         <section className="section bg-light">
           <div className="container">
-            <div className="kicker">{tr("More in")} {pillar?.title}</div>
+            <div className="kicker">{tr("More in")} {pillar ? tr(pillar.title) : null}</div>
             <h2 className="h2">{tr("Related services")}</h2>
             <div className="grid g3" style={{ marginTop: 36 }}>
               {related.map((r) => {

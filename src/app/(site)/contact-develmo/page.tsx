@@ -46,7 +46,7 @@ export default async function ContactPage() {
               <h4>{tr("Head office")}</h4>
               <p>
                 {site.address.line}, {site.address.city} {site.address.postcode},{" "}
-                {site.address.country}
+                {tr(site.address.country)}
               </p>
             </div>
             <div className="blk">

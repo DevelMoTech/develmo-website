@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { t } from "@/lib/i18n";
 
 // DevelMo's own product footage — a live collage in the Why section.
 const CLIPS = [
@@ -9,7 +10,8 @@ const CLIPS = [
   { src: "/hero-1.mp4", label: "PadelIQ · sports analytics" },
 ];
 
-export function ProductCollage() {
+export function ProductCollage({ locale = "en" }: { locale?: string }) {
+  const tr = (s: string) => t(s, locale);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -43,7 +45,7 @@ export function ProductCollage() {
       {CLIPS.map((c, i) => (
         <div className={`pc-item${i === 0 ? " pc-main" : ""}`} key={c.src}>
           <video src={c.src} muted loop playsInline preload="metadata" tabIndex={-1} aria-hidden="true" />
-          <span className="pc-tag">{c.label}</span>
+          <span className="pc-tag">{tr(c.label)}</span>
         </div>
       ))}
     </div>

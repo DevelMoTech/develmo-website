@@ -88,8 +88,8 @@ export default async function WhoWeArePage() {
             {site.offices.map((o) => (
               <div className="office" key={o.code}>
                 <div className="code">{o.code}</div>
-                <h4>{o.name}</h4>
-                <p>{o.desc}</p>
+                <h4>{tr(o.name)}</h4>
+                <p>{tr(o.desc)}</p>
               </div>
             ))}
           </div>

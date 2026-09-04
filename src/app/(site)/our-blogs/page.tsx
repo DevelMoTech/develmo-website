@@ -31,11 +31,11 @@ export default async function BlogPage() {
           <div className="grid g3">
             {posts.map((p) => (
               <Link className="card" href={`/our-blogs/${p.slug}`} key={p.slug}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: "var(--blue-ink)", letterSpacing: ".04em", textTransform: "uppercase" }}>
+                <div data-i18n="content" style={{ fontSize: 12, fontWeight: 700, color: "var(--blue-ink)", letterSpacing: ".04em", textTransform: "uppercase" }}>
                   {p.category} · {formatDate(p.date)}
                 </div>
-                <h3 style={{ marginTop: 8 }}>{p.title}</h3>
-                <p>{p.excerpt}</p>
+                <h3 data-i18n="content" style={{ marginTop: 8 }}>{p.title}</h3>
+                <p data-i18n="content">{p.excerpt}</p>
                 <span className="link">{tr("Read article")} →</span>
               </Link>
             ))}

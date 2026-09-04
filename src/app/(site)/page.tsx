@@ -197,7 +197,7 @@ export default async function Home() {
               </div>
             </div>
             <div className="glow-teal panel-raise">
-              <ProductCollage />
+              <ProductCollage locale={locale} />
             </div>
           </div>
         </div>

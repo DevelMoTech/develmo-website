@@ -78,8 +78,8 @@ export function ProductSlider({ locale }: { locale: string }) {
             <span className="sdot live" /> {tr("Live product")}
           </span>
           <h3 className="ps-name">{s.name}</h3>
-          <p className="ps-tag">{s.tag}</p>
-          <p className="ps-desc">{s.desc}</p>
+          <p className="ps-tag">{tr(s.tag)}</p>
+          <p className="ps-desc">{tr(s.desc)}</p>
           <Link className="btn btn-teal btn-lg" href={s.href}>
             {tr("Explore")} {s.name} →
           </Link>
@@ -94,7 +94,7 @@ export function ProductSlider({ locale }: { locale: string }) {
             aria-label={`Show ${c.name}`}
           >
             <b>{c.name}</b>
-            <span>{c.tag}</span>
+            <span>{tr(c.tag)}</span>
           </button>
         ))}
       </div>

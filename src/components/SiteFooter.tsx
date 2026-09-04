@@ -153,7 +153,7 @@ export function SiteFooter({ locale }: { locale: string }) {
                   <b>
                     {tr(o.name)} <em>{tr(tierFor(o.code))}</em>
                   </b>
-                  <small>{o.desc}</small>
+                  <small>{tr(o.desc)}</small>
                 </div>
               </div>
             ))}
@@ -163,7 +163,7 @@ export function SiteFooter({ locale }: { locale: string }) {
         {/* Band 4 — legal */}
         <div className="foot-bottom">
           <span className="foot-cred">// BUILT IN-HOUSE · NO TEMPLATES</span>
-          <span>© {new Date().getFullYear()} DevelMo. All rights reserved.</span>
+          <span>© {new Date().getFullYear()} DevelMo. {tr("All rights reserved.")}</span>
           <span>
             <Link href="/privacy">{tr("Privacy Policy")}</Link> ·{" "}
             <Link href="/terms">{tr("Terms of Service")}</Link> ·{" "}
