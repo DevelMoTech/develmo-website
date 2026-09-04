@@ -24,7 +24,8 @@ export type LimiterKey =
   | "email_change"
   | "contact"
   | "apply"
-  | "upload";
+  | "upload"
+  | "vitals";
 
 export type Limit = { max: number; windowSeconds: number };
 
@@ -41,6 +42,9 @@ export const DEFAULT_LIMITS: Record<LimiterKey, Limit> = {
   contact: { max: 5, windowSeconds: 60 },
   apply: { max: 5, windowSeconds: 600 },
   upload: { max: 30, windowSeconds: 600 },
+  // Real user metrics: a generous per-address cap, since one visit sends
+  // at most two batches and a busy office shares one address.
+  vitals: { max: 120, windowSeconds: 600 },
 };
 
 export type LimitResult = { limited: boolean; remaining: number; resetAt: Date };

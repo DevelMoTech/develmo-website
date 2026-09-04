@@ -752,3 +752,8 @@ button.adm-link { background: none; border: 0; padding: 0; font: inherit; font-w
 .adm-mono { overflow-wrap: anywhere; }
 .adm-sec-ua { display: block; max-inline-size: 100%; overflow-wrap: anywhere; }
 .adm-table td .adm-seo-flags { gap: 4px; }
+
+/* ---- Performance manager (Phase 9) ---- */
+.adm-card-head { flex-wrap: wrap; }
+.adm-card-head > div:first-child { min-inline-size: 0; flex: 1 1 220px; }
+.adm-card-head .adm-actions { flex: 0 1 auto; min-inline-size: 0; }

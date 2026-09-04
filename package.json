@@ -13,7 +13,9 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:seed": "node --env-file-if-exists=.env.local scripts/db-seed.mts",
-    "admin:bootstrap": "node --env-file-if-exists=.env.local scripts/admin-bootstrap.mts"
+    "admin:bootstrap": "node --env-file-if-exists=.env.local scripts/admin-bootstrap.mts",
+    "postbuild": "node scripts/build-stats.mjs",
+    "perf:build-stats": "node scripts/build-stats.mjs"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",

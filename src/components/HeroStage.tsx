@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Button } from "@/components/ui";
 import { stats } from "@/lib/site";
 import { t } from "@/lib/i18n";
+import { DEFAULT_MEDIA_SETTINGS, type MediaSettings } from "@/lib/schemas/performance";
 
 // DevelMo's own computer-vision footage, run as an auto-advancing proof-of-work slider.
 const CLIPS = [
@@ -13,17 +14,42 @@ const CLIPS = [
 ];
 const INTERVAL = 7000;
 
-export function HeroStage({ locale }: { locale: string }) {
+// Media queries read the React way, so the server renders the same markup
+// it always has (every query false, so the clips play) and the client
+// settles to the truth on hydration without an effect that sets state.
+function useMediaQuery(query: string | null): boolean {
+  const subscribe = useCallback(
+    (onChange: () => void) => {
+      if (!query) return () => {};
+      const mq = window.matchMedia(query);
+      mq.addEventListener("change", onChange);
+      return () => mq.removeEventListener("change", onChange);
+    },
+    [query],
+  );
+  const get = useCallback(() => (query ? window.matchMedia(query).matches : false), [query]);
+  return useSyncExternalStore(subscribe, get, () => false);
+}
+
+export function HeroStage({ locale, media = DEFAULT_MEDIA_SETTINGS }: { locale: string; media?: MediaSettings }) {
   const tr = (s: string) => t(s, locale);
   const [i, setI] = useState(0);
   const refs = useRef<(HTMLVideoElement | null)[]>([]);
+  // Whether the clips may play at all (brief §3.8). Reduced motion always
+  // wins, whatever the settings say. Resolved on the client after mount, so
+  // the server output is unchanged and the slider behaves as before until a
+  // setting or the visitor preference says otherwise.
+  const reduced = useMediaQuery("(prefers-reduced-motion: reduce)");
+  const coarse = useMediaQuery("(pointer: coarse)");
+  const posterOnly = useMediaQuery(media.posterOnlyMaxWidth > 0 ? `(max-width: ${media.posterOnlyMaxWidth}px)` : null);
+  const play = !reduced && !posterOnly && (media.heroAutoplayMobile || !coarse);
 
   // Play only the active clip (it loops), pause the rest, and auto-advance.
   useEffect(() => {
     refs.current.forEach((v, k) => {
       if (!v) return;
       v.muted = true;
-      if (k === i) {
+      if (k === i && play) {
         if (v.readyState === 0) v.load();
         const p = v.play();
         if (p && typeof p.catch === "function") p.catch(() => {});
@@ -33,12 +59,12 @@ export function HeroStage({ locale }: { locale: string }) {
     });
     const t = window.setTimeout(() => setI((v) => (v + 1) % CLIPS.length), INTERVAL);
     return () => window.clearTimeout(t);
-  }, [i]);
+  }, [i, play]);
 
   // Resume the active clip when the tab/window becomes visible again.
   useEffect(() => {
     const onVis = () => {
-      if (document.visibilityState !== "visible") return;
+      if (document.visibilityState !== "visible" || !play) return;
       const v = refs.current[i];
       if (v) {
         v.muted = true;
@@ -47,7 +73,7 @@ export function HeroStage({ locale }: { locale: string }) {
     };
     document.addEventListener("visibilitychange", onVis);
     return () => document.removeEventListener("visibilitychange", onVis);
-  }, [i]);
+  }, [i, play]);
 
   const clip = CLIPS[i];
 
@@ -67,7 +93,7 @@ export function HeroStage({ locale }: { locale: string }) {
             muted
             loop
             playsInline
-            preload={k === 0 ? "auto" : "none"}
+            preload={play && k === 0 ? "auto" : "none"}
             tabIndex={-1}
             aria-hidden="true"
           />

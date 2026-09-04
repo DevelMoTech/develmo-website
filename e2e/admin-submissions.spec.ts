@@ -87,6 +87,9 @@ test("the public contact form stores the enquiry with the ?service, ?intent and 
   const page = await context.newPage();
   // Land on the home page with a utm tag first, so first-touch attribution is exercised.
   await page.goto(`${baseURL}/?utm_source=e2e&utm_campaign=inbox`);
+  // First touch is recorded by a client effect, so let it run before
+  // navigating on; otherwise the contact page becomes the landing page.
+  await page.waitForFunction(() => !!window.sessionStorage.getItem("dm_visit"), null, { timeout: 15_000 });
   await page.goto(`${baseURL}/contact-develmo?service=CrowdIQ&intent=demo&industry=retail`);
   await page.fill("#firstName", "Grace");
   await page.fill("#lastName", "Hopper");

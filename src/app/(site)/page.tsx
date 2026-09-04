@@ -9,6 +9,7 @@ import { getIndustries } from "@/lib/repo/industries";
 import { getLocale } from "@/lib/i18n-server";
 import { t, loc } from "@/lib/i18n";
 import { withSeoOverride } from "@/lib/meta";
+import { getMediaSettings } from "@/lib/repo/media-settings";
 
 // The home page's metadata lives in the root layout; only an override from
 // /admin/seo/pages changes it.
@@ -38,10 +39,11 @@ export default async function Home() {
   const tr = (s: string) => t(s, locale);
   const pillars = await getPillars();
   const featuredIndustries = (await getIndustries()).slice(0, 6);
+  const media = await getMediaSettings();
   return (
     <>
       {/* 1 · HERO (full background video) */}
-      <HeroStage locale={locale} />
+      <HeroStage locale={locale} media={media} />
 
       {/* CLIENTS marquee (right after hero, devsinc-style two-row) */}
       <section className="clients">
