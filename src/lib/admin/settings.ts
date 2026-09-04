@@ -5,6 +5,7 @@ import { settings } from "@/db/schema";
 import { DEFAULT_ORGANIZATION_FACTS } from "@/lib/seo/organization";
 import { DEFAULT_ROBOTS_BODY } from "@/lib/seo/robots";
 import { organizationFactsSchema, robotsBodySchema } from "@/lib/schemas/seo";
+import { DEFAULT_SECURITY_RETENTION, DEFAULT_TURNSTILE, securityRetentionSchema, turnstileSchema } from "@/lib/schemas/security";
 
 // Key-value settings (brief §3.11) with a zod schema per key. Reads fall back
 // to the default on a missing row or a database error, so the site never
@@ -41,6 +42,8 @@ const SCHEMAS = {
   robots: robotsBodySchema,
   org_schema: organizationFactsSchema,
   sitemap_state: sitemapStateSchema,
+  turnstile: turnstileSchema,
+  security_retention: securityRetentionSchema,
 } as const;
 const DEFAULTS: { [K in keyof typeof SCHEMAS]: z.infer<(typeof SCHEMAS)[K]> } = {
   retention: DEFAULT_RETENTION,
@@ -48,6 +51,8 @@ const DEFAULTS: { [K in keyof typeof SCHEMAS]: z.infer<(typeof SCHEMAS)[K]> } = 
   robots: { body: DEFAULT_ROBOTS_BODY },
   org_schema: DEFAULT_ORGANIZATION_FACTS,
   sitemap_state: { generatedAt: null, urls: 0 },
+  turnstile: DEFAULT_TURNSTILE,
+  security_retention: DEFAULT_SECURITY_RETENTION,
 };
 export type SettingKey = keyof typeof SCHEMAS;
 

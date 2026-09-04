@@ -81,6 +81,8 @@ const SEGMENT_LABELS: Record<string, string> = {
   schema: "Structured data",
   sitemap: "Sitemap",
   robots: "robots.txt",
+  limits: "Rate limits",
+  sessions: "Sessions",
   audit: "Audit",
   events: "Events",
   access: "Access control",

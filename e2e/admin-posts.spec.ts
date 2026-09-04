@@ -267,7 +267,17 @@ test("slug change writes a 301 into the redirects table; revisions diff and rest
   const redirect = await db().query<{ destination: string; code: number; enabled: boolean }>(`select destination, code, enabled from redirects where source = $1`, [`/our-blogs/${oldSlug}`]);
   expect(redirect.rows[0]).toEqual({ destination: `/our-blogs/${newSlug}`, code: 301, enabled: true });
   expect((await request.get(`${baseURL}/our-blogs/${newSlug}`)).status()).toBe(200);
-  expect((await request.get(`${baseURL}/our-blogs/${oldSlug}`)).status()).toBe(404);
+  // Phase 7 made these rows live: the proxy serves the 301 from a map it
+  // refreshes on a short TTL, so poll until it takes hold rather than
+  // asserting the old 404, which was only true while the rows were unserved.
+  const oldUrl = `${baseURL}/our-blogs/${oldSlug}`;
+  let moved = await request.get(oldUrl, { maxRedirects: 0 });
+  for (let i = 0; i < 40 && moved.status() !== 301; i++) {
+    await new Promise((r) => setTimeout(r, 500));
+    moved = await request.get(oldUrl, { maxRedirects: 0 });
+  }
+  expect(moved.status()).toBe(301);
+  expect(moved.headers().location).toContain(`/our-blogs/${newSlug}`);
 
   // Revisions: two saves, a diff, a restore that writes a third.
   await page.setViewportSize({ width: 1280, height: 900 });
@@ -290,7 +300,14 @@ test("slug change writes a 301 into the redirects table; revisions diff and rest
   expect(back.rows[0]?.destination).toBe(`/our-blogs/${oldSlug}`);
   const stale = await db().query(`select 1 from redirects where source = $1`, [`/our-blogs/${oldSlug}`]);
   expect(stale.rowCount).toBe(0);
-  expect((await request.get(`${baseURL}/our-blogs/${oldSlug}`)).status()).toBe(200);
+  // The proxy holds the previous map for up to its refresh window, so the
+  // deleted rule can still send this URL away for a moment.
+  let liveAgain = await request.get(`${baseURL}/our-blogs/${oldSlug}`);
+  for (let i = 0; i < 40 && liveAgain.status() !== 200; i++) {
+    await new Promise((r) => setTimeout(r, 500));
+    liveAgain = await request.get(`${baseURL}/our-blogs/${oldSlug}`);
+  }
+  expect(liveAgain.status()).toBe(200);
 
   // Scheduled publishing: a due scheduled post is not yet "published" in the
   // table but already visible; the cron flips it and records who did it.

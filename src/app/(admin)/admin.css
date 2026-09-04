@@ -747,3 +747,8 @@ button.adm-link { background: none; border: 0; padding: 0; font: inherit; font-w
 .adm-delta-down { color: var(--adm-success); font-weight: 600; }
 .adm-code-field .adm-input { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; line-height: 1.5; }
 .adm-finding-detail { font-size: 13px; color: var(--adm-muted); overflow-wrap: anywhere; }
+
+/* ---- Security manager (Phase 8) ---- */
+.adm-mono { overflow-wrap: anywhere; }
+.adm-sec-ua { display: block; max-inline-size: 100%; overflow-wrap: anywhere; }
+.adm-table td .adm-seo-flags { gap: 4px; }

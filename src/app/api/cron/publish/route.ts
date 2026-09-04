@@ -4,6 +4,7 @@ import { closeDueJobs } from "@/lib/admin/jobs";
 import { publishDuePosts } from "@/lib/admin/posts";
 import { purgeExpired, retryPendingDeliveries } from "@/lib/admin/submissions";
 import { sendDailyDigests } from "@/lib/submissions/digest";
+import { purgeExpiredAccessRules, purgeSecurityEvents, recordDependencyAudit } from "@/lib/admin/security";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -32,5 +33,21 @@ export async function GET(req: Request) {
   const retried = await retryPendingDeliveries();
   const digests = await sendDailyDigests();
   const purged = await purgeExpired();
-  return NextResponse.json({ ok: true, published, closedJobs: closed, retried, digests, purged, at: new Date().toISOString() });
+  // Security housekeeping (brief §3.7): the dependency scan, the event
+  // retention window, and rules whose expiry has passed.
+  const deps = await recordDependencyAudit(null);
+  const eventsPurged = await purgeSecurityEvents();
+  const rulesExpired = await purgeExpiredAccessRules();
+  return NextResponse.json({
+    ok: true,
+    published,
+    closedJobs: closed,
+    retried,
+    digests,
+    purged,
+    dependencies: deps.ok ? deps.summary : { error: deps.error },
+    securityEventsPurged: eventsPurged,
+    accessRulesExpired: rulesExpired,
+    at: new Date().toISOString(),
+  });
 }

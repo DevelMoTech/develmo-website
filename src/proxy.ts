@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import type { NextFetchEvent, NextRequest } from "next/server";
 import { matchRedirect, REDIRECT_TTL_MS, redirectTarget, type RedirectMap } from "@/lib/seo/redirect-map";
+import { ACCESS_TTL_MS, BLOCKED_BODY, evaluateAccess, type AccessRuleSet } from "@/lib/security/access";
+import { proxyClientIp } from "@/lib/security/client-ip";
 
 const SESSION_COOKIE = "__Host-dm_session";
 const CSRF_COOKIE = "__Host-dm_csrf";
@@ -28,6 +30,47 @@ const REDIRECT_FETCH_TIMEOUT_MS = 3_000;
 type RedirectCache = { map: RedirectMap | null; fetchedAt: number; inflight: Promise<void> | null };
 const redirectCache: RedirectCache = { map: null, fetchedAt: 0, inflight: null };
 const pendingHits = new Map<string, number>();
+
+// IP access control (brief §3.7). Same shape as the redirect map: the rule
+// set lives in this instance's memory and is refreshed from
+// /api/security/access-rules at most once per ACCESS_TTL_MS, in the
+// background after the response, so no public request pays a database
+// lookup. The endpoint needs the cron secret, which the proxy sends; without
+// it, or with the database unreachable, the proxy holds the last rule set it
+// had and enforces nothing new. An unreadable blocklist fails open on
+// purpose: a marketing site must keep serving visitors.
+type AccessCache = { set: AccessRuleSet | null; fetchedAt: number; inflight: Promise<void> | null };
+const accessCache: AccessCache = { set: null, fetchedAt: 0, inflight: null };
+
+async function refreshAccessRules(origin: string): Promise<void> {
+  if (accessCache.inflight) return accessCache.inflight;
+  const run = (async () => {
+    const secret = process.env.CRON_SECRET;
+    try {
+      if (!secret || secret.length < 16) throw new Error("CRON_SECRET is not set; IP access rules cannot be read");
+      const res = await fetch(`${origin}/api/security/access-rules`, {
+        headers: { authorization: `Bearer ${secret}` },
+        cache: "no-store",
+        signal: AbortSignal.timeout(REDIRECT_FETCH_TIMEOUT_MS),
+      });
+      if (!res.ok) throw new Error(`access rules ${res.status}`);
+      const set = (await res.json()) as AccessRuleSet;
+      if (set && typeof set === "object" && Array.isArray(set.rules)) accessCache.set = set;
+      accessCache.fetchedAt = Date.now();
+    } catch (err) {
+      console.error("[proxy] access rule refresh failed:", err instanceof Error ? err.message : err);
+      // Keep the last good set; a cold instance enforces nothing and retries
+      // in two seconds rather than waiting a whole TTL.
+      accessCache.fetchedAt = Date.now() - ACCESS_TTL_MS + 2_000;
+    }
+  })();
+  accessCache.inflight = run;
+  try {
+    await run;
+  } finally {
+    accessCache.inflight = null;
+  }
+}
 
 async function refreshRedirects(origin: string): Promise<void> {
   if (redirectCache.inflight) return redirectCache.inflight;
@@ -89,9 +132,38 @@ export async function proxy(req: NextRequest, event: NextFetchEvent) {
   const host = (req.headers.get("host") || "").toLowerCase();
   const isLiveDomain = host === "develmo.com" || host.endsWith(".develmo.com");
 
+  // IP access control, before anything else: a blocked address gets 403 on
+  // the whole site, pages and API alike, and never reaches a route. The
+  // rule set that decides this is already in memory.
+  //
+  // The two endpoints the proxy feeds itself from are exempt. They are
+  // reached only by this function, over the loopback, with the cron secret;
+  // running the check on them would have the refresh wait on itself.
+  const origin = req.nextUrl.origin;
+  const isProxyFeed = pathname === "/api/security/access-rules" || pathname === "/api/seo/redirects";
+  if (!isProxyFeed) {
+    if (!accessCache.set) {
+      await refreshAccessRules(origin);
+    } else if (Date.now() - accessCache.fetchedAt > ACCESS_TTL_MS && !accessCache.inflight) {
+      event.waitUntil(refreshAccessRules(origin));
+    }
+  }
+  if (!isProxyFeed && accessCache.set && accessCache.set.rules.length > 0) {
+    const decision = evaluateAccess(accessCache.set, proxyClientIp(req.headers));
+    if (!decision.allowed) {
+      return new NextResponse(BLOCKED_BODY, {
+        status: 403,
+        headers: {
+          "content-type": "text/plain; charset=utf-8",
+          "cache-control": "no-store",
+          "x-robots-tag": "noindex, nofollow",
+        },
+      });
+    }
+  }
+
   // Public pages only: the console and the API are never redirected.
   if (!isAdminPage && !isApi && (req.method === "GET" || req.method === "HEAD")) {
-    const origin = req.nextUrl.origin;
     if (!redirectCache.map) {
       await refreshRedirects(origin);
     } else if (Date.now() - redirectCache.fetchedAt > REDIRECT_TTL_MS && !redirectCache.inflight) {

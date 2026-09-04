@@ -64,6 +64,12 @@ const nextConfig: NextConfig = {
   // Blocking costs only the cached lookup, which is a memory hit after the
   // first request per route.
   htmlLimitedBots: /.*/,
+  // The dependency scan reads the installed tree the way npm audit does, so
+  // the lockfile has to travel with the two routes that run it.
+  outputFileTracingIncludes: {
+    "/api/cron/publish": ["./package-lock.json"],
+    "/api/admin/security/dependencies/scan": ["./package-lock.json"],
+  },
   async headers() {
     return [
       {
