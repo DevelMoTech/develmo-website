@@ -143,7 +143,14 @@ one-time sign-in link and a temporary password. Use them once, then:
    environment.
 
 To add colleagues, use `/admin/users`, "Invite". Invitations expire after 72
-hours. There is no public sign-up route anywhere in the application.
+hours.
+
+There is no public sign-up route: nobody can create an account for themselves.
+There is a public **request** form at `/admin/request-access`, linked from the
+sign-in page. It creates a queue entry and nothing else, no account and no
+invitation. Requests appear at the bottom of `/admin/users`, where an Owner or
+Admin either approves one, which sends exactly the same single-use invitation
+the Invite button sends, or declines it, which sends nothing at all.
 
 ---
 
@@ -264,6 +271,7 @@ that commit gives you the site exactly as it was before this work started.
 | Task | Where |
 |---|---|
 | Add a user | `/admin/users`, Invite |
+| Someone asks for access | `/admin/users`, Access requests. Approve to send them an invitation, choosing the role; decline to close it with no email. A declined person is never told, which is deliberate |
 | Remove someone who has left | `/admin/users`, set status to suspended, then revoke their sessions at `/admin/security/sessions` |
 | Someone lost their phone | `/admin/users`, reset their second factor. They enrol again at next sign-in |
 | Read enquiries | `/admin/submissions` |

@@ -64,6 +64,13 @@
       "when": 1788463138472,
       "tag": "0008_phase7_audit_lock",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1788795025011,
+      "tag": "0009_phase12_access_requests",
+      "breakpoints": true
     }
   ]
 }

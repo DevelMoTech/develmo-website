@@ -17,10 +17,26 @@ export type Target = { route: string; page: Page; kind: "anon" | "enrol" | "veri
 // shell. Skipping that step is not a login failure: every admin route quietly
 // answers with a redirect stub to /admin/mfa/enrol, and a sweep would then
 // measure that one page dozens of times and call the surface clean.
+// Playwright applies extraHTTPHeaders to every request a context makes,
+// including cross-origin ones. Sending x-forwarded-for to gstatic.com turns
+// the reCAPTCHA script into a CORS preflight Google does not allow, so the
+// script fails and the page logs console errors a real browser would never
+// see. The header exists only to give each context its own client address for
+// the rate limiter, so scope it to the site under test.
+async function clientIp(context: BrowserContext, baseURL: string, ip: string): Promise<void> {
+  const origin = new URL(baseURL).origin;
+  await context.route("**/*", async (route) => {
+    const req = route.request();
+    if (!req.url().startsWith(origin)) return route.continue();
+    return route.continue({ headers: { ...req.headers(), "x-forwarded-for": ip } });
+  });
+}
+
 export async function signedInOwner(browser: Browser, baseURL: string, prefix: string) {
   const email = uniqueEmail(prefix);
   await createUser({ email, password: PASSWORD, role: "owner", name: "Sweep Owner", totpSecret: TOTP_SECRET });
-  const context = await browser.newContext({ extraHTTPHeaders: { "x-forwarded-for": uniqueIp() } });
+  const context = await browser.newContext();
+  await clientIp(context, baseURL, uniqueIp());
   const login = await apiLogin(context.request, baseURL, { email, password: PASSWORD });
   expect(login.status, "password step").toBe(200);
   const verify = await context.request.post(`${baseURL}/api/admin/auth/mfa/verify`, {
@@ -37,7 +53,8 @@ export async function signedInOwner(browser: Browser, baseURL: string, prefix: s
 async function halfSignedIn(browser: Browser, baseURL: string, prefix: string, withSecret: boolean) {
   const email = uniqueEmail(prefix);
   await createUser({ email, password: PASSWORD, role: "owner", name: "Sweep Pending", totpSecret: withSecret ? TOTP_SECRET : undefined });
-  const context = await browser.newContext({ extraHTTPHeaders: { "x-forwarded-for": uniqueIp() } });
+  const context = await browser.newContext();
+  await clientIp(context, baseURL, uniqueIp());
   const login = await apiLogin(context.request, baseURL, { email, password: PASSWORD });
   expect(login.status).toBe(200);
   return { context, page: await context.newPage(), csrf: login.csrf };
@@ -55,7 +72,8 @@ export async function openSweep(browser: Browser, baseURL: string, prefix: strin
   const owner = await signedInOwner(browser, baseURL, prefix);
   const enrol = await halfSignedIn(browser, baseURL, `${prefix}-enrol`, false);
   const verify = await halfSignedIn(browser, baseURL, `${prefix}-verify`, true);
-  const anonContext = await browser.newContext({ extraHTTPHeaders: { "x-forwarded-for": uniqueIp() } });
+  const anonContext = await browser.newContext();
+  await clientIp(anonContext, baseURL, uniqueIp());
   const anon = await anonContext.newPage();
 
   const contexts: BrowserContext[] = [owner.context, enrol.context, verify.context, anonContext];

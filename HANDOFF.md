@@ -330,7 +330,8 @@ evidence are in `docs/dashboard/PHASE-0-PLAN.md`.
 `/api/admin`. Nothing public was added, moved or renamed.
 
 - `(auth)` group, no session needed: `/admin/login`, `/admin/signup`,
-  `/admin/forgot-password`, `/admin/reset-password`. `/admin/mfa/enrol` and
+  `/admin/forgot-password`, `/admin/reset-password`, `/admin/request-access`.
+  `/admin/mfa/enrol` and
   `/admin/mfa/verify` need a half-authenticated session, that is, the password
   step passed and the second factor still outstanding.
 - `(shell)` group, session required: the dashboard, posts and the knowledge
@@ -356,11 +357,31 @@ Owner and Admin **must** hold a second factor. A session that has not cleared
 it is redirected to `/admin/mfa/enrol` on every admin route, which is worth
 knowing when writing tests, see §11.8.
 
+**How an account comes into existence.** Exactly one way: a single-use
+invitation, redeemed at `/admin/signup?token=...`. The first Owner comes from
+`npm run admin:bootstrap`, which refuses to run once any user exists. There is
+no public sign-up.
+
+`/admin/request-access` is public but grants nothing: it writes a row to
+`access_requests` and stops. An Owner or Admin decides at the bottom of
+`/admin/users`; approving calls the same `createInvite` the Invite button
+calls, declining sends no email. That is what lets the form be public without
+registration being open, and `e2e/admin-access-requests.spec.ts` asserts that
+no path through the public form produces an account or an invitation on its
+own.
+
+The form answers identically whether or not the address already has an
+account, and stores nothing when it does, so it cannot be used to test whether
+someone is a user. It is rate limited to three per hour per address, carries
+the same honeypot and reCAPTCHA as the contact form, and the dead-link guard
+on the navigation editor accepts `/admin/login` but no other `/admin` path.
+
 ### 11.5 Data model
 
 The groups that matter:
 
-- **Auth:** `users`, `sessions`, `invites`, `auth_tokens`, `recovery_codes`.
+- **Auth:** `users`, `sessions`, `invites`, `auth_tokens`, `recovery_codes`,
+  `access_requests`.
 - **Content:** `content_entries` (one row per pillar, service, industry,
   product, about, and the site facts, stats and technologies, keyed by
   `entity` plus `key`, payload in `jsonb`), `posts`, `post_revisions`,

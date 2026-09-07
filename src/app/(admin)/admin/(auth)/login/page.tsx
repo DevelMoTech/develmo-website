@@ -37,6 +37,7 @@ export default async function LoginPage({
       <LoginForm csrf={csrf} next={next} />
       <div className="adm-auth-links">
         <Link href="/admin/forgot-password">Forgot your password?</Link>
+        <Link href="/admin/request-access">Need an account? Request access</Link>
       </div>
     </AuthCard>
   );

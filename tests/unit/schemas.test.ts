@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { ZodType } from "zod";
 
+import * as access from "@/lib/schemas/access";
 import * as auth from "@/lib/schemas/auth";
 import * as content from "@/lib/schemas/content";
 import * as job from "@/lib/schemas/job";
@@ -109,6 +110,10 @@ const postFields = {
 const template = { subject: "Thanks for applying", body: "We have your application." };
 
 const CASES: Case[] = [
+  // ---- access requests ----
+  { name: "accessRequestSchema", schema: access.accessRequestSchema, ok: { name: "Ada Lovelace", email: "ada@lovelace.test", reason: "I need to publish the launch post." }, bad: { name: "Ada Lovelace", email: "ada@lovelace.test", reason: "too short" } },
+  { name: "accessDecisionSchema", schema: access.accessDecisionSchema, ok: { id: UUID, decision: "approve", role: "editor" }, bad: { id: UUID, decision: "approve" } },
+
   // ---- auth ----
   { name: "emailSchema", schema: auth.emailSchema, ok: "  Ada@Lovelace.TEST ", bad: "ada@lovelace" },
   { name: "passwordSchema", schema: auth.passwordSchema, ok: "correct horse battery", bad: "tooshort" },
@@ -235,7 +240,7 @@ describe("every exported zod schema", () => {
 // The point of the file: if someone adds a schema and no test, this fails.
 describe("schema coverage", () => {
   it("covers every schema exported from src/lib/schemas", () => {
-    const modules: Record<string, Record<string, unknown>> = { auth, content, job, media, performance, post, security, seo, submission };
+    const modules: Record<string, Record<string, unknown>> = { access, auth, content, job, media, performance, post, security, seo, submission };
     const exported: string[] = [];
     for (const [file, mod] of Object.entries(modules)) {
       for (const [name, value] of Object.entries(mod)) {

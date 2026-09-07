@@ -24,6 +24,7 @@ export type LimiterKey =
   | "email_change"
   | "contact"
   | "apply"
+  | "access_request"
   | "upload"
   | "vitals";
 
@@ -41,6 +42,9 @@ export const DEFAULT_LIMITS: Record<LimiterKey, Limit> = {
   // The contact form keeps its existing 5 per minute per IP.
   contact: { max: 5, windowSeconds: 60 },
   apply: { max: 5, windowSeconds: 600 },
+  // Asking for console access is a rare, deliberate act; three an hour per
+  // address is plenty for a person and useless for a script.
+  access_request: { max: 3, windowSeconds: 3600 },
   upload: { max: 30, windowSeconds: 600 },
   // Real user metrics: a generous per-address cap, since one visit sends
   // at most two batches and a busy office shares one address.

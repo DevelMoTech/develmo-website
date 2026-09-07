@@ -105,3 +105,32 @@ export const recoveryCodes = pgTable(
   },
   (t) => [index("recovery_codes_user_id_idx").on(t.userId)],
 );
+
+// Access requests (the public "request access" form). A request is never an
+// account: an Owner or Admin approves it, and approval sends the same
+// single-use invite that /admin/users sends by hand. Nothing here grants
+// access on its own, which is what keeps the console invite-only.
+export const accessRequestStatus = pgEnum("access_request_status", ["pending", "approved", "declined"]);
+
+export const accessRequests = pgTable(
+  "access_requests",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: text("name").notNull(),
+    email: text("email").notNull(),
+    organisation: text("organisation").notNull().default(""),
+    reason: text("reason").notNull().default(""),
+    status: accessRequestStatus("status").notNull().default("pending"),
+    // Set on approval: the invite the decision created.
+    inviteId: uuid("invite_id").references(() => invites.id, { onDelete: "set null" }),
+    decidedById: uuid("decided_by_id").references(() => users.id, { onDelete: "set null" }),
+    decidedAt: timestamp("decided_at", { withTimezone: true }),
+    decisionNote: text("decision_note").notNull().default(""),
+    // Stored hashed with the server-side salt, for abuse prevention only.
+    ipHash: text("ip_hash"),
+    userAgent: text("user_agent"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("access_requests_status_idx").on(t.status), index("access_requests_email_idx").on(t.email)],
+);

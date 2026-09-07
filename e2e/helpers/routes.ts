@@ -12,6 +12,7 @@ export const PUBLIC_ADMIN_ROUTES = [
   "/admin/signup",
   "/admin/forgot-password",
   "/admin/reset-password",
+  "/admin/request-access",
 ];
 
 // Routes behind the session gate that need no id.

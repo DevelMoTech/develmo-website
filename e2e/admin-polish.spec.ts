@@ -291,8 +291,11 @@ test("no console errors and no React warnings on any admin route", async ({ brow
   for (const t of sweep.targets) {
     refs.get(t.page)!.route = t.route;
     await visit(t.page, t.route);
-    // Hydration warnings arrive after load, so give React a beat to complain.
-    await t.page.waitForTimeout(250);
+    // Hydration warnings arrive after load, so let React finish. Wait for the
+    // network too: a Next prefetch still in flight when the sweep navigates on
+    // is cancelled, and Chrome reports the cancellation as a console error.
+    await waitForQuietDom(t.page);
+    await t.page.waitForLoadState("networkidle", { timeout: 5_000 }).catch(() => {});
   }
   console.log(`CONSOLE ADMIN: ${sink.length} errors or warnings across ${sweep.targets.length} routes`);
   if (sink.length) console.log(sink.slice(0, 40).join("\n"));
@@ -311,7 +314,8 @@ test("no console errors and no React warnings on the public routes", async ({ br
   for (const route of PUBLIC_ROUTES) {
     ref.route = route;
     await visit(page, route);
-    await page.waitForTimeout(250);
+    await waitForQuietDom(page);
+    await page.waitForLoadState("networkidle", { timeout: 5_000 }).catch(() => {});
   }
   console.log(`CONSOLE PUBLIC: ${sink.length} errors or warnings across ${PUBLIC_ROUTES.length} routes`);
   if (sink.length) console.log(sink.slice(0, 40).join("\n"));

@@ -13,6 +13,7 @@ const PUBLIC_ADMIN_PAGES = new Set([
   "/admin/signup",
   "/admin/forgot-password",
   "/admin/reset-password",
+  "/admin/request-access",
 ]);
 
 const PREVIEW_PATH = /^\/admin\/posts\/[^/]+\/preview\/?$/;

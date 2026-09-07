@@ -30,7 +30,7 @@ const INVITE_TTL_MS = 72 * 60 * 60 * 1000;
 const RESET_TTL_MS = 60 * 60 * 1000;
 const EMAIL_CHANGE_TTL_MS = 60 * 60 * 1000;
 
-type Ctx = { ipHash: string; userAgent: string | null };
+export type Ctx = { ipHash: string; userAgent: string | null };
 
 export type Actor = Pick<UserRow, "id" | "email" | "role">;
 
