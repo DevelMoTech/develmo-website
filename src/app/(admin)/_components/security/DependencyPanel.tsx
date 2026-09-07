@@ -67,7 +67,7 @@ export function DependencyPanel({ runs, csrf }: { runs: DependencyRun[]; csrf: s
       {advisories.length > 0 && (
         <div style={{ marginBlockStart: 18 }}>
           <TableFrame>
-            <div className="adm-table-wrap">
+            <div className="adm-table-wrap" tabIndex={0}>
               <table className="adm-table">
                 <caption className="adm-sr">Known advisories in the installed dependencies</caption>
                 <thead>

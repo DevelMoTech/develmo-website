@@ -127,7 +127,7 @@ export function AccessManager({ rules, csrf, yourIp }: { rules: AccessRuleRow[];
         <Card title="No rules" description="Nothing is blocked or allowed by address. Add a rule above when you need to shut out a specific source." />
       ) : (
         <TableFrame>
-          <div className="adm-table-wrap">
+          <div className="adm-table-wrap" tabIndex={0}>
             <table className="adm-table">
               <caption className="adm-sr">IP access rules</caption>
               <thead>

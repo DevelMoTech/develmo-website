@@ -99,7 +99,7 @@ export function OrganizationEditor({ initial, csrf, canWrite, sameAs, siteUrl }:
         )}
       </form>
       <Card title="Emitted JSON-LD" description="Exactly what the site chrome writes into every public page, validated as you type.">
-        <pre className="adm-pre" aria-label="Organization JSON-LD">{JSON.stringify(ld, null, 2)}</pre>
+        <pre className="adm-pre" tabIndex={0} aria-label="Organization JSON-LD">{JSON.stringify(ld, null, 2)}</pre>
       </Card>
     </div>
   );
@@ -125,7 +125,7 @@ export function FaqToggles({ routes, csrf, canWrite }: { routes: { path: string;
   return (
     <Card title="FAQPage per detail page" description={`${routes.filter((r) => r.enabled).length} of ${routes.length} detail pages with FAQs emit FAQPage JSON-LD. Off keeps the visible FAQ section and drops only the markup.`}>
       <TableFrame>
-        <div className="adm-table-wrap">
+        <div className="adm-table-wrap" tabIndex={0}>
           <table className="adm-table">
             <caption className="adm-sr">FAQPage structured data per detail page</caption>
             <thead>

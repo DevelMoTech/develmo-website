@@ -286,6 +286,205 @@ For any change that touches pages, components, i18n, config, or content:
 
 ---
 
+## 11. The admin console (the dashboard)
+
+Added over eleven phases on top of `e0a9992`, the pre-dashboard baseline. The
+brief is `DASHBOARD-BRIEF.md`; per-phase notes are in `docs/dashboard/`. The
+migration runbook, written for the owner rather than for an engineer, is
+`docs/dashboard/RUNBOOK.md`.
+
+### 11.1 The one thing to understand first
+
+**The database is an override, not a source of truth.** Every public page reads
+through `repoQuery()` in `src/lib/repo/`, which tries the database, falls back
+to the typed files in `src/lib` on error or timeout, and trips a circuit
+breaker after repeated failures so a sick database costs one slow request, not
+every request. Unplug Postgres and develmo.com serves exactly what it served
+before this work existed. `tests/unit/repo-util.test.ts` asserts the fallback
+on error and on timeout.
+
+That is why the seed script is optional, why rolling back is easy, and why
+none of this put the live site at risk.
+
+### 11.2 Architecture
+
+| Concern | Choice | Where |
+|---|---|---|
+| Database | Postgres. `@neondatabase/serverless` when the host looks like Neon, `pg` otherwise | `src/db/index.ts` |
+| Schema and migrations | Drizzle ORM, `drizzle-kit generate` and `migrate` | `src/db/schema/`, `drizzle/` |
+| Reads | `repoQuery({ keys, tags, revalidate, query, fallback })`, tag-invalidated | `src/lib/repo/` |
+| Auth | Hand rolled. Argon2 passwords, JWT sessions in a `__Host-` cookie, TOTP second factor, single-use recovery codes | `src/lib/auth/` |
+| Route protection | `requirePageUser()` for pages, `adminRoute()` for handlers, both server side | `src/lib/auth/current.ts`, `src/lib/auth/api.ts` |
+| Validation | zod on every write, one schema per entity | `src/lib/schemas/` |
+| Styling | One stylesheet, `src/app/(admin)/admin.css`, hand written, no framework and no component kit | |
+| Charts | Hand rolled SVG. No chart library | |
+
+Auth.js v5 was evaluated in phase 0 and rejected: it wanted control of the
+session cookie and the sign-in flow, which conflicted with the existing
+middleware and with the MFA and audit requirements. The decision and its
+evidence are in `docs/dashboard/PHASE-0-PLAN.md`.
+
+### 11.3 Routes
+
+55 pages under `src/app/(admin)`, all beneath `/admin`, plus the handlers under
+`/api/admin`. Nothing public was added, moved or renamed.
+
+- `(auth)` group, no session needed: `/admin/login`, `/admin/signup`,
+  `/admin/forgot-password`, `/admin/reset-password`. `/admin/mfa/enrol` and
+  `/admin/mfa/verify` need a half-authenticated session, that is, the password
+  step passed and the second factor still outstanding.
+- `(shell)` group, session required: the dashboard, posts and the knowledge
+  base, media, jobs and applications, submissions, SEO, security, performance,
+  site content, translations, users, settings, account and the audit log.
+
+`/admin` and `/api/admin` are excluded from `sitemap.xml` and disallowed in
+`robots.txt` by a rule in code that the robots editor cannot override.
+
+### 11.4 Roles
+
+Four roles, checked server side on every page and every handler. The matrix
+lives in `src/lib/auth/rbac.ts` and is unit tested.
+
+| Role | Can |
+|---|---|
+| Owner | Everything, including users, security and destructive actions |
+| Admin | Everything except transferring ownership |
+| Editor | Content, posts, jobs, media, submissions. No users, no security, no settings |
+| Viewer | Read only, everywhere |
+
+Owner and Admin **must** hold a second factor. A session that has not cleared
+it is redirected to `/admin/mfa/enrol` on every admin route, which is worth
+knowing when writing tests, see §11.8.
+
+### 11.5 Data model
+
+The groups that matter:
+
+- **Auth:** `users`, `sessions`, `invites`, `auth_tokens`, `recovery_codes`.
+- **Content:** `content_entries` (one row per pillar, service, industry,
+  product, about, and the site facts, stats and technologies, keyed by
+  `entity` plus `key`, payload in `jsonb`), `posts`, `post_revisions`,
+  `post_translations`, `media`, `translations`.
+- **Jobs:** `jobs`, `applications`, `application_notes`, `application_events`.
+- **Enquiries:** `submissions`, `submission_notes`.
+- **SEO:** `seo_overrides`, `redirects`, `seo_audits`, `seo_audit_findings`.
+- **Security:** `security_events`, `ip_rules`, `rate_limit_config`,
+  `rate_limit_hits`, `dependency_audits`.
+- **Performance:** `web_vitals`, `psi_snapshots`, `build_stats`.
+- **Operations:** `settings`, `email_templates`, `audit_log`.
+
+`audit_log` is append only. There is no delete path for it anywhere in the
+codebase, deliberately.
+
+### 11.6 Security
+
+- Sessions in a `__Host-` prefixed, `HttpOnly`, `SameSite=Lax`, `Secure`
+  cookie. Rotated on privilege change, revocable per session.
+- CSRF: a double-submit token on every mutating handler, plus an Origin check.
+- Argon2id password hashing. Rate limited sign-in with lockout and a
+  `security_events` row per attempt.
+- IP addresses are stored **hashed** with a server-side salt, never in the
+  clear, in submissions, applications and the audit log.
+- IP blocklist and allowlist enforced in `src/proxy.ts`, cached with a short
+  TTL so there is no per-request database read. The console refuses to block
+  the address the request came from without a typed confirmation.
+- Applicant CVs go to private Vercel Blob storage and are served only through
+  short-lived signed URLs.
+- **The public CSP was never changed.** Response headers across eight public
+  routes are byte identical to the pre-dashboard capture. The one path scoped
+  addition is for `/admin` only.
+
+### 11.7 Public site integration
+
+Five things the console changes on the live site, each proven end to end:
+
+1. **Content.** Services, industries, products and the about page render from
+   `content_entries` when present, from the typed files otherwise.
+2. **Posts and jobs.** `/our-blogs`, `/our-knowledge-base` and `/jobs` render
+   database rows. A slug change writes a 301 into `redirects` automatically.
+3. **SEO.** Per-route metadata overrides, redirects, sitemap membership,
+   `robots.txt` and the Organization schema, all served without a rebuild.
+4. **Translations.** `t()` reads database override, then `uiMessages`, then
+   `extraMessages`, then English. The console never writes to `extra.ts` and
+   never to the generated `data.ts`.
+5. **Enquiries.** The contact form writes a `submissions` row **before**
+   attempting delivery, so an enquiry survives a total outage of every
+   delivery channel and can be replayed from the console.
+
+### 11.8 Gotchas, learned the hard way
+
+- **A function cannot cross the server-to-client boundary.** Passing
+  `publicPath={(key) => ...}` into a client component made every content page
+  fail to render with "Functions cannot be passed directly to Client
+  Components". Props are data. Pass a string prefix and build the value in the
+  client component.
+- **An Owner or Admin session is not signed in until the second factor is
+  cleared.** Skipping the MFA step in a test is not a login failure: every
+  admin route quietly answers with a redirect stub to `/admin/mfa/enrol`. A
+  whole-surface sweep written this way measured that single page 54 times and
+  reported the console clean. `e2e/helpers/sweep.ts` now proves each route
+  rendered its own page, with its own `h1` and no redirect stub, before any
+  sweep is allowed to measure anything.
+- **React hydration replaces DOM nodes after the load event.** axe-core
+  reported "page must have a level-one heading" on pages that demonstrably had
+  one, and reported it on different pages each run. `waitForQuietDom()` waits
+  for mutations to stop before scanning. Any tool that walks the DOM after
+  `load` needs the same treatment.
+- **`.adm-root a { color: inherit }` outranked `.adm-btn-primary`.** Every link
+  styled as a primary button rendered its label at 1.03:1 contrast, effectively
+  invisible, and no human had noticed. Specificity beats intent; the rule is
+  now `a:not(.adm-btn)`.
+- **`npx next build` does not run npm's `postbuild` hook,** so
+  `.next-build/build-stats.json` is never written and the build stats endpoint
+  answers 400. Use `NEXT_DIST_DIR=.next-build npm run build`.
+- **`path-to-regexp` rejects non-capturing groups** in `next.config.ts` header
+  and redirect sources. Use capturing groups.
+- **The vitals endpoint needs no CSP change.** `navigator.sendBeacon` to a
+  same-origin path is covered by `connect-src 'self'`. This was verified
+  rather than assumed.
+- The reCAPTCHA keys are live in local development, so any test that posts to
+  a protected public endpoint has to mint a real token in a browser page.
+
+### 11.9 Deliberately not done
+
+- **URL-prefixed locales.** Locale is still a cookie, so only English is
+  indexed. Metadata, titles and SEO overrides are English only, by decision.
+- **A nonce-based CSP.** Out of scope by the brief, and more valuable now that
+  an authenticated surface exists. `'unsafe-inline'` and `'unsafe-eval'`
+  remain in `script-src`, exactly as before this work.
+- **`next/image`.** Explicitly excluded, see §7. The logo collapses to
+  `width: 0` in flex containers. Separate roadmap item.
+- **Translating the console.** Admin strings are English only, by decision,
+  and are not in `t()` and not in `extra.ts`.
+- **Moving blog and job content fully off `src/lib`.** The files remain the
+  source of truth for the seeded records until the owner decides otherwise.
+
+### 11.10 Decisions still with the owner
+
+Recorded here so they do not get lost. None of these should be made by a
+contributor.
+
+1. Which Postgres provider, which account owns it, and the cost tier.
+2. Who holds the Owner account, and what happens when they leave. There is a
+   documented recovery path in the runbook, §10, and it needs database access.
+3. Whether blog and job content moves fully off `src/lib`, or the files stay
+   the source of truth for the seeded records.
+4. GDPR retention periods for enquiries, applicant CVs and IP data, and who
+   the data controller contact is. The console has retention settings; nobody
+   has set a policy.
+5. Whether applicant CV storage needs a data processing agreement with Vercel.
+6. Whether to enable Turnstile, which needs a Cloudflare account and a CSP
+   addition for `challenges.cloudflare.com`.
+7. The nonce-based CSP work.
+8. Whether to pin `axe-core` as an explicit devDependency. The accessibility
+   suite loads it from `node_modules/axe-core`, where it arrives today as a
+   transitive dependency of `eslint-config-next`. It is not on the approved
+   dependency list in the brief, so it was not added; if that transitive
+   dependency ever goes away, `e2e/admin-a11y.spec.ts` stops running.
+
+
+---
+
 ## Appendix A — Environment variables (set in Vercel, never commit)
 | Var | Purpose | Required? |
 |---|---|---|
@@ -297,6 +496,26 @@ For any change that touches pages, components, i18n, config, or content:
 | `RECAPTCHA_SECRET_KEY` | reCAPTCHA v3 secret (server-side siteverify) | Optional (recommended) |
 | `RECAPTCHA_MIN_SCORE` | Score cut-off 0.0-1.0, default `0.5` | Optional |
 | `E2E_BASE_URL` | Target for Playwright (local only) | Local test only |
+| `DATABASE_URL` | Postgres connection string for the admin console. Unset: the public site still renders from the typed files, the console reports it cannot reach the database | Required for the console |
+| `DATABASE_DRIVER` | Set to `neon` to force the serverless HTTP driver for a host that does not contain `neon.tech` | Optional |
+| `AUTH_SECRET` | Signs sessions and one-time tokens. `openssl rand -base64 32`. Changing it signs everyone out | Required for the console |
+| `ADMIN_BOOTSTRAP_EMAIL` | Email address of the first Owner | Bootstrap only, unset afterwards |
+| `ADMIN_BOOTSTRAP_TOKEN` | Gate on `npm run admin:bootstrap`. The script also refuses to run once any user exists | Bootstrap only, unset afterwards |
+| `ADMIN_BASE_URL` | Absolute origin used in invitation, reset and confirmation emails. Falls back to `NEXT_PUBLIC_SITE_URL`, then `https://develmo.com` | Optional |
+| `NEXT_PUBLIC_SITE_URL` | Canonical public origin | Optional |
+| `FORMSUBMIT_URL` | FormSubmit endpoint base, default `https://formsubmit.co/ajax`. Tests point it at an unreachable host to prove a delivery failure never loses an enquiry | Optional |
+| `UPSTASH_REDIS_REST_URL` | Durable rate limiting. Unset: a database-backed window is used instead | Recommended in production |
+| `UPSTASH_REDIS_REST_TOKEN` | Pairs with the URL above | Recommended in production |
+| `BLOB_READ_WRITE_TOKEN` | Vercel Blob, for media and applicant CVs. Unset: files are written to `./.data/media`, correct locally and wrong on Vercel | Required in production |
+| `CRON_SECRET` | Protects `/api/cron/*`, and authorises the proxy to read the IP access rules. At least 16 characters. Unset: the cron route answers 503 rather than failing quietly | Required for scheduled publishing |
+| `PSI_API_KEY` | PageSpeed Insights runs from the performance manager | Optional |
+| `TURNSTILE_SECRET_KEY` | Cloudflare Turnstile secret. The site key is stored in the console, not here. Switching Turnstile on also needs `challenges.cloudflare.com` in `script-src` and `frame-src` | Optional |
+| `NEXT_PUBLIC_VITALS_SAMPLE_RATE` | Share of public page views reporting Core Web Vitals, default `0.25`. Set to `1` in development | Optional |
+| `NEXT_DIST_DIR` | Redirects the build output away from `.next` so a verification build can run while `next dev` is up. Local only, never set in Vercel | Local build only |
+
+`VERCEL_URL`, `VERCEL_BRANCH_URL` and `VERCEL_PROJECT_PRODUCTION_URL` are injected by Vercel on every deployment and are trusted by `src/lib/seo/origin.ts` when deriving the absolute origin. Do not set them yourself.
+
+The complete list, with a comment on each, is `.env.example` at the repo root.
 
 ## Appendix B — External accounts & ownership (all owned by DevelMo, not the contributor)
 > The contributor works from a **local copy** and hands changes back. No repo/Vercel/DNS access is granted; the owner performs all deploys and infra changes.

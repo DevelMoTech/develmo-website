@@ -69,7 +69,7 @@ export function CachePanel({ tags, routes, csrf, canWrite }: { tags: CacheTagRow
 
       <div style={{ marginBlockStart: 18 }}>
         <TableFrame>
-          <div className="adm-table-wrap">
+          <div className="adm-table-wrap" tabIndex={0}>
             <table className="adm-table">
               <caption className="adm-sr">Cache tags and when each was last invalidated</caption>
               <thead>

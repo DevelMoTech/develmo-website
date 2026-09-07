@@ -1,4 +1,3 @@
-/* eslint-disable */
 // Supplementary UI translations (contact form + page/template strings).
 // Machine-generated with native critic review; further native review recommended before relying on ar/ur.
 export const extraMessages: Record<string, Record<string, string>> = {

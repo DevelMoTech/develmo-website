@@ -62,7 +62,7 @@ export function BuildPanel({ view, csrf, canRecord }: { view: BuildView; csrf: s
               {view.delta.added.length > 0 && <p className="adm-help">New routes: {view.delta.added.join(", ")}</p>}
               {view.delta.removed.length > 0 && <p className="adm-help">Removed routes: {view.delta.removed.join(", ")}</p>}
               <TableFrame>
-                <div className="adm-table-wrap">
+                <div className="adm-table-wrap" tabIndex={0}>
                   <table className="adm-table adm-table-plain">
                     <caption className="adm-sr">Routes whose client JS changed</caption>
                     <thead>
@@ -93,7 +93,7 @@ export function BuildPanel({ view, csrf, canRecord }: { view: BuildView; csrf: s
             <Button size="sm" variant={showAll ? "primary" : "ghost"} onClick={() => setShowAll(true)}>Every route ({current.routes.length})</Button>
           </div>
           <TableFrame>
-            <div className="adm-table-wrap">
+            <div className="adm-table-wrap" tabIndex={0}>
               <table className="adm-table">
                 <caption className="adm-sr">Client JavaScript per route</caption>
                 <thead>
@@ -115,7 +115,7 @@ export function BuildPanel({ view, csrf, canRecord }: { view: BuildView; csrf: s
 
           <Card title="Largest client chunks" description="Every route that uses a chunk pays for it once; the browser then caches it across the site.">
             <TableFrame>
-              <div className="adm-table-wrap">
+              <div className="adm-table-wrap" tabIndex={0}>
                 <table className="adm-table adm-table-plain">
                   <caption className="adm-sr">The largest client chunks in this build</caption>
                   <thead>

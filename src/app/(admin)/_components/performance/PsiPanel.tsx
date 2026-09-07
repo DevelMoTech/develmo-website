@@ -83,7 +83,7 @@ export function PsiPanel({ runs, routes, csrf, canRun, configured }: { runs: Psi
         <>
           <div style={{ marginBlockStart: 18 }}>
             <TableFrame>
-              <div className="adm-table-wrap">
+              <div className="adm-table-wrap" tabIndex={0}>
                 <table className="adm-table">
                   <caption className="adm-sr">Stored PageSpeed Insights runs</caption>
                   <thead>
@@ -122,7 +122,7 @@ export function PsiPanel({ runs, routes, csrf, canRun, configured }: { runs: Psi
                 <p className="adm-muted" style={{ margin: 0 }}>PageSpeed returned no outstanding opportunities for this run.</p>
               ) : (
                 <TableFrame>
-                  <div className="adm-table-wrap">
+                  <div className="adm-table-wrap" tabIndex={0}>
                     <table className="adm-table adm-table-plain">
                       <caption className="adm-sr">Opportunities PageSpeed reported</caption>
                       <thead>

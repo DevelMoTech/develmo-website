@@ -174,7 +174,7 @@ export function SessionsList({ csrf, sessions }: { csrf: string; sessions: Sessi
   return (
     <div>
       {error && <Alert kind="error">{error}</Alert>}
-      <div className="adm-table-wrap" style={{ marginBlockStart: 14 }}>
+      <div className="adm-table-wrap" tabIndex={0} style={{ marginBlockStart: 14 }}>
         <table className="adm-table">
           <caption className="adm-sr">Active sessions</caption>
           <thead>

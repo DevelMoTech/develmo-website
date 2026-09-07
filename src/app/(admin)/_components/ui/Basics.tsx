@@ -62,11 +62,15 @@ export function Skeleton({ width = "100%", height = 16, className, style }: { wi
   return <span className={["adm-skel", className].filter(Boolean).join(" ")} style={{ inlineSize, blockSize: height, ...style }} aria-hidden="true" />;
 }
 
-export function EmptyState({ icon = "inbox", title, body, action }: { icon?: IconName; title: string; body?: ReactNode; action?: ReactNode }) {
+// level: h3 suits a state inside a titled card, which already carries an h2.
+// Standing on its own directly under the page heading it must be an h2, or the
+// heading order skips a level.
+export function EmptyState({ icon = "inbox", title, body, action, level = 3 }: { icon?: IconName; title: string; body?: ReactNode; action?: ReactNode; level?: 2 | 3 }) {
+  const Heading = level === 2 ? "h2" : "h3";
   return (
     <div className="adm-state">
       <Icon name={icon} size={36} />
-      <h3>{title}</h3>
+      <Heading>{title}</Heading>
       {body && <p>{body}</p>}
       {action && <div className="adm-actions">{action}</div>}
     </div>

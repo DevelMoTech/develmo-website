@@ -108,7 +108,7 @@ export default async function AuditRunPage({ params, searchParams }: { params: P
             <Card title="Nothing to show" description={findings.length === 0 ? "The crawl found no issues." : "No findings match this filter."} />
           ) : (
             <TableFrame>
-              <div className="adm-table-wrap">
+              <div className="adm-table-wrap" tabIndex={0}>
                 <table className="adm-table">
                   <caption className="adm-sr">Audit findings</caption>
                   <thead>

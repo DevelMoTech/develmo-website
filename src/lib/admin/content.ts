@@ -118,21 +118,6 @@ export async function saveEntry(entity: ContentEntity, key: string, data: unknow
   return { ok: true };
 }
 
-// Ordering is what the public list pages render in, so it is content too.
-export async function reorderEntries(entity: ContentEntity, keys: string[], actor: Actor): Promise<{ ok: true } | { ok: false; error: string }> {
-  const db = getDb();
-  const existing = await db.select({ key: contentEntries.key }).from(contentEntries).where(eq(contentEntries.entity, entity));
-  if (existing.length === 0) return { ok: false, error: "not_seeded" };
-  const known = new Set(existing.map((r) => r.key));
-  if (keys.length !== known.size || keys.some((k) => !known.has(k))) return { ok: false, error: "key_mismatch" };
-  for (const [i, key] of keys.entries()) {
-    await db.update(contentEntries).set({ sortOrder: i, updatedById: actor.user.id }).where(sql`${contentEntries.entity} = ${entity} and ${contentEntries.key} = ${key}`);
-  }
-  await audit({ actorId: actor.user.id, actorEmail: actor.user.email, action: `content.${entity}.reorder`, entityType: "content_entry", entityId: entity, after: { order: keys }, ipHash: actor.ipHash });
-  bust("content", ENTITY_TAG[entity] ?? "content");
-  return { ok: true };
-}
-
 // ---------- Singletons: site facts, stats, tech ----------
 
 async function readSingleton<T>(entity: string, key: string, fallback: T): Promise<{ value: T; fromFile: boolean }> {

@@ -147,7 +147,7 @@ export function RedirectsManager({ rows, csrf, canWrite }: { rows: RedirectRow[]
       ) : (
         <div style={{ marginBlockEnd: 18 }}>
           <TableFrame>
-            <div className="adm-table-wrap">
+            <div className="adm-table-wrap" tabIndex={0}>
               <table className="adm-table">
                 <caption className="adm-sr">Database redirects</caption>
                 <thead>

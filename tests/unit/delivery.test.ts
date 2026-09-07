@@ -79,7 +79,7 @@ describe("deliveryText", () => {
     const { subject, text, fields } = deliveryText(row);
     expect(subject).toBe("New enquiry from Ada Lovelace");
     expect(text).toBe(["Name: Ada Lovelace", "Email: ada@lovelace.test", "Company: Analytical Engines", "Service: CrowdIQ", "We need a vision system.\n\n[Context] service=CrowdIQ, industry=retail, intent=demo"].join("\n"));
-    expect(fields.phone).toBe("—");
+    expect(fields.phone).toBe("Not given");
     expect(fields.message).toContain("[Context] service=CrowdIQ");
   });
 });

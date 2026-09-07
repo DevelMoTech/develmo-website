@@ -21,7 +21,7 @@ export default async function RedirectsPage() {
       <SeoNav />
       <RedirectsManager rows={rows} csrf={csrf} canWrite={can(user.role, "seo:write")} />
       <Card title="Static redirects" description="Deployed with the code in next.config.ts. They run before the proxy, so a database rule cannot use one of these sources." className="adm-card">
-        <div className="adm-table-wrap">
+        <div className="adm-table-wrap" tabIndex={0}>
           <table className="adm-table adm-table-plain">
             <caption className="adm-sr">Static redirects from next.config.ts</caption>
             <thead>

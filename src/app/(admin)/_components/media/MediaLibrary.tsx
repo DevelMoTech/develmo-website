@@ -159,7 +159,7 @@ export function MediaBrowser({ csrf, items, view, canWrite, folders }: { csrf: s
           ))}
         </ul>
       ) : (
-        <div className="adm-table-wrap">
+        <div className="adm-table-wrap" tabIndex={0}>
           <table className="adm-table">
             <caption className="adm-sr">Files</caption>
             <thead>

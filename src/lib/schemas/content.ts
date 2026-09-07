@@ -180,11 +180,6 @@ export const saveEntrySchema = z.object({
   data: z.unknown(),
 });
 
-export const reorderSchema = z.object({
-  entity: z.enum(ENTITIES),
-  keys: z.array(z.string().trim().min(1).max(120)).min(1).max(200),
-});
-
 export const translationSaveSchema = z.object({
   locale: z.enum(["ar", "ur", "fr", "es"]),
   key: z.string().min(1).max(1000),

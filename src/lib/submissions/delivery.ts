@@ -55,7 +55,9 @@ export function deliveryText(row: SubmissionRow): { subject: string; text: strin
   return {
     subject,
     text,
-    fields: { name: row.name, email: row.email, phone: row.phone || "—", company: row.company || "—", budget: row.budget || "—", service: row.formService || "—", message },
+    // "Not given" rather than a dash: these values are spread into the
+    // FormSubmit table template and land in a real email.
+    fields: { name: row.name, email: row.email, phone: row.phone || "Not given", company: row.company || "Not given", budget: row.budget || "Not given", service: row.formService || "Not given", message },
   };
 }
 

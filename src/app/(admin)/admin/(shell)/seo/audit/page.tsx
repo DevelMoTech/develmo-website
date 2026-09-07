@@ -39,7 +39,7 @@ export default async function AuditPage() {
         <Card title="No runs yet" description="Run the first audit to get a baseline." />
       ) : (
         <TableFrame>
-          <div className="adm-table-wrap">
+          <div className="adm-table-wrap" tabIndex={0}>
             <table className="adm-table">
               <caption className="adm-sr">Audit runs, newest first</caption>
               <thead>

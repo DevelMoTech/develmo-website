@@ -28,7 +28,7 @@ export function VitalsTable({ rows, days }: { rows: VitalsRouteRow[]; days: numb
         ))}
       </div>
       <TableFrame>
-        <div className="adm-table-wrap">
+        <div className="adm-table-wrap" tabIndex={0}>
           <table className="adm-table">
             <caption className="adm-sr">75th percentile Core Web Vitals per route and device class</caption>
             <thead>

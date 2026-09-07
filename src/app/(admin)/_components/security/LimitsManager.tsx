@@ -21,7 +21,7 @@ function window(seconds: number): string {
 export function RateLimits({ rows, csrf }: { rows: RateLimitRow[]; csrf: string }) {
   return (
     <TableFrame>
-      <div className="adm-table-wrap">
+      <div className="adm-table-wrap" tabIndex={0}>
         <table className="adm-table">
           <caption className="adm-sr">Per endpoint rate limits</caption>
           <thead>

@@ -75,14 +75,14 @@ export function SitemapManager({ rows, state, csrf, canWrite, sitemapUrl }: { ro
           </>
         }
       />
-      <div className="adm-toolbar" role="search" style={{ marginBlockStart: 18 }}>
+      <div className="adm-toolbar" role="search" aria-label="Filter the sitemap routes" style={{ marginBlockStart: 18 }}>
         <div className="adm-field adm-field-q">
           <label className="adm-label" htmlFor="sm-q">Search routes</label>
           <input id="sm-q" className="adm-input" type="search" value={q} onChange={(e) => setQ(e.target.value)} />
         </div>
       </div>
       <TableFrame>
-        <div className="adm-table-wrap">
+        <div className="adm-table-wrap" tabIndex={0}>
           <table className="adm-table">
             <caption className="adm-sr">Sitemap entries per public route</caption>
             <thead>

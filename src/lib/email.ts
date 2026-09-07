@@ -11,7 +11,9 @@ export function fromAddress(): string {
 export async function sendEmail(msg: { to: string; subject: string; text: string }): Promise<EmailResult> {
   const key = process.env.RESEND_API_KEY;
   if (!key) {
-    console.log(`[email] RESEND_API_KEY unset, not sent -> ${msg.to}: ${msg.subject}`);
+    // A warning, not a debug print: mail is silently not being delivered and
+    // the operator needs to see that in the server log.
+    console.warn(`[email] RESEND_API_KEY unset, not sent -> ${msg.to}: ${msg.subject}`);
     return { sent: false, skipped: "no-api-key" };
   }
   try {

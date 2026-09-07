@@ -89,7 +89,7 @@ export function DataTable<T>({
         <div className="adm-card">{empty}</div>
       ) : (
         <TableFrame>
-          <div className="adm-table-wrap">
+          <div className="adm-table-wrap" tabIndex={0}>
             <table className="adm-table">
               <caption className="adm-sr">{caption}</caption>
               <thead>
@@ -152,7 +152,7 @@ export function TableFilters({
 }) {
   const dirty = params.q || Object.keys(params.filters).length > 0;
   return (
-    <form className="adm-toolbar" method="get" action={basePath} role="search">
+    <form className="adm-toolbar" method="get" action={basePath} role="search" aria-label={searchLabel}>
       <input type="hidden" name="sort" value={params.sort} />
       <input type="hidden" name="dir" value={params.dir} />
       <div className="adm-field adm-field-q">

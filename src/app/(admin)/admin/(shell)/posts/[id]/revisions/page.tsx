@@ -114,8 +114,8 @@ export default async function RevisionsPage({ params, searchParams }: { params: 
                 <tbody>
                   {revisions.map((r, i) => (
                     <tr key={r.id}>
-                      <td data-label="A"><input type="radio" name="a" value={r.id} defaultChecked={a?.id === r.id} aria-label={`Compare from ${when(r.createdAt)}`} /></td>
-                      <td data-label="B"><input type="radio" name="b" value={r.id} defaultChecked={b?.id === r.id} aria-label={`Compare to ${when(r.createdAt)}`} /></td>
+                      <td data-label="A"><label className="adm-rowcheck-hit"><input type="radio" name="a" value={r.id} defaultChecked={a?.id === r.id} aria-label={`Compare from ${when(r.createdAt)}`} /></label></td>
+                      <td data-label="B"><label className="adm-rowcheck-hit"><input type="radio" name="b" value={r.id} defaultChecked={b?.id === r.id} aria-label={`Compare to ${when(r.createdAt)}`} /></label></td>
                       <td data-label="When">
                         <div>{when(r.createdAt)} {i === 0 && <span className="adm-badge adm-badge-ok">current</span>}</div>
                         <div className="adm-help">{r.note || "Saved"} by {actorName(r.createdById)}</div>
@@ -143,7 +143,7 @@ export default async function RevisionsPage({ params, searchParams }: { params: 
                 return (
                   <section key={key} aria-label={label(key)}>
                     <h3 className="adm-diff-title">{label(key)} <span className="adm-help">{changedCount(ops)} line{changedCount(ops) === 1 ? "" : "s"}</span></h3>
-                    <pre className="adm-diff">
+                    <pre className="adm-diff" tabIndex={0}>
                       {ops.map((op, i) =>
                         op.kind === "same" ? (
                           <span key={i} className="adm-diff-same">{op.text || " "}{"\n"}</span>

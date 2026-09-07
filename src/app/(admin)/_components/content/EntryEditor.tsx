@@ -187,7 +187,7 @@ export function EntryEditor({ entity, entries, csrf, canWrite, pathPrefix }: { e
     <div className="adm-split">
       <div>
         <TableFrame>
-          <div className="adm-table-wrap">
+          <div className="adm-table-wrap" tabIndex={0}>
             <table className="adm-table">
               <caption className="adm-sr">Entries</caption>
               <thead><tr><th scope="col">Entry</th><th scope="col"><span className="adm-sr">Actions</span></th></tr></thead>

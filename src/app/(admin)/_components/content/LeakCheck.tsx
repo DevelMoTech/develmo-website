@@ -73,7 +73,7 @@ export function LeakCheck({ routes, csrf }: { routes: string[]; csrf: string }) 
             <Alert kind="error">{totalLeaks} string{totalLeaks === 1 ? "" : "s"} still render in English.</Alert>
           )}
           <TableFrame>
-            <div className="adm-table-wrap">
+            <div className="adm-table-wrap" tabIndex={0}>
               <table className="adm-table adm-table-plain">
                 <caption className="adm-sr">Leak check results</caption>
                 <thead>

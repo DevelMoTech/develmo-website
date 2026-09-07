@@ -50,7 +50,7 @@ export default async function MediaPage({ searchParams }: { searchParams: Promis
     <>
       <PageHeader kicker="Content" title="Media" description="Images for posts and pages, stored outside the repository under unguessable keys and served from this site's own address." />
       {canWrite && <Uploader csrf={csrf} folder={q.folder === "/" ? "" : q.folder} />}
-      <form className="adm-toolbar" method="get" action="/admin/media" role="search" style={{ marginBlockStart: 18 }}>
+      <form className="adm-toolbar" method="get" action="/admin/media" role="search" aria-label="Filter the media library" style={{ marginBlockStart: 18 }}>
         <input type="hidden" name="view" value={q.view} />
         <input type="hidden" name="sort" value={q.sort} />
         <div className="adm-field adm-field-q">
@@ -103,6 +103,7 @@ export default async function MediaPage({ searchParams }: { searchParams: Promis
         <div className="adm-card">
           <EmptyState
             icon="media"
+            level={2}
             title={total === 0 && !filtered ? "The library is empty" : "No files match"}
             body={total === 0 && !filtered ? (canWrite ? "Drop images above to add them. Give each one alt text and it can be attached to a post." : "Nothing has been uploaded yet.") : "Try another search or clear the filters."}
           />

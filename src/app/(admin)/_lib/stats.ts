@@ -192,7 +192,7 @@ export async function recentNotifications(role: Role): Promise<{ items: Notifica
     for (const r of rows) items.push({ id: `e-${r.id}`, at: r.createdAt, title: r.type.replace(/_/g, " "), detail: r.email ?? "unknown account", when: relativeTime(r.createdAt), href: "/admin/security" });
   }
   items.sort((a, b) => b.at.getTime() - a.at.getTime());
-  return { items: items.slice(0, 8).map(({ at: _at, ...rest }) => rest), unread: items.length };
+  return { items: items.slice(0, 8).map((item) => ({ id: item.id, title: item.title, detail: item.detail, when: item.when, href: item.href })), unread: items.length };
 }
 
 // Real counts for the module overview pages.

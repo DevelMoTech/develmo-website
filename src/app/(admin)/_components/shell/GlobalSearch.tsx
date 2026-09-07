@@ -87,7 +87,7 @@ export function GlobalSearch() {
   const listId = `${id}-list`;
 
   return (
-    <div className={`adm-search${mobileOpen ? " adm-search-open" : ""}`} ref={wrap} role="search">
+    <div className={`adm-search${mobileOpen ? " adm-search-open" : ""}`} ref={wrap} role="search" aria-label="Search the console">
       <Icon name="search" size={18} />
       <label className="adm-sr" htmlFor="adm-search">Search the console</label>
       <input

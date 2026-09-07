@@ -278,7 +278,10 @@
 }
 .adm-root *, .adm-root *::before, .adm-root *::after { box-sizing: border-box; }
 .adm-root h1, .adm-root h2, .adm-root h3, .adm-root h4 { font-family: var(--font-head); color: var(--adm-ink); margin: 0; line-height: 1.2; }
-.adm-root a { color: inherit; }
+/* Plain links inherit, but a link styled as a button must keep the colour its
+   variant sets: `.adm-root a` outranks `.adm-btn-primary`, which left white
+   button text computing as --adm-text on --adm-ink, a 1.03:1 contrast. */
+.adm-root a:not(.adm-btn) { color: inherit; }
 .adm-root :focus-visible { outline: 2px solid var(--adm-focus); outline-offset: 3px; border-radius: 4px; }
 .adm-root[data-admin-theme="high-contrast"] :focus-visible { outline-width: 3px; }
 .adm-sr { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
@@ -348,7 +351,9 @@
 .adm-search-item:hover, .adm-search-item[aria-selected="true"] { background: var(--adm-surface-2); }
 .adm-search-item small { color: var(--adm-muted); margin-inline-start: auto; font-size: 12px; white-space: nowrap; }
 .adm-search-empty { padding: 14px 10px; color: var(--adm-muted); font-size: 14px; }
-.adm-iconbtn { display: inline-flex; align-items: center; justify-content: center; inline-size: 44px; block-size: 44px; border-radius: 10px; border: var(--adm-border-w) solid transparent; background: none; color: var(--adm-muted); cursor: pointer; position: relative; }
+/* flex: none, or a narrow flex row shrinks the square below the 44px tap
+   target: the drawer close button measured 43.5px wide at 360. */
+.adm-iconbtn { display: inline-flex; flex: none; align-items: center; justify-content: center; inline-size: 44px; block-size: 44px; border-radius: 10px; border: var(--adm-border-w) solid transparent; background: none; color: var(--adm-muted); cursor: pointer; position: relative; }
 .adm-iconbtn:hover { background: var(--adm-surface-2); color: var(--adm-ink); }
 .adm-iconbtn[aria-expanded="true"] { background: var(--adm-surface-2); color: var(--adm-ink); }
 .adm-count { position: absolute; inset-block-start: 6px; inset-inline-end: 6px; min-inline-size: 18px; block-size: 18px; padding: 0 5px; border-radius: 999px; background: var(--adm-primary); color: var(--adm-on-primary); font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
@@ -368,7 +373,6 @@
 .adm-menu-item .adm-menu-check { margin-inline-start: auto; color: var(--adm-primary-ink); }
 .adm-menu-item small { color: var(--adm-muted); font-size: 12px; margin-inline-start: auto; }
 .adm-menu-empty { padding: 12px 10px; color: var(--adm-muted); font-size: 13.5px; }
-.adm-menu-note { display: block; padding: 8px 10px 4px; font-size: 12px; color: var(--adm-muted); }
 .adm-notif { display: grid; gap: 2px; }
 .adm-notif strong { font-size: 13.5px; color: var(--adm-ink); }
 .adm-notif span { font-size: 12.5px; color: var(--adm-muted); }
@@ -646,20 +650,25 @@ textarea.adm-input { min-block-size: 120px; resize: vertical; }
 .adm-image-field { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 12px; align-items: start; }
 .adm-image-field img { inline-size: 120px; block-size: 90px; object-fit: cover; border-radius: 8px; border: var(--adm-border-w) solid var(--adm-line); background: var(--adm-surface-3); }
 .adm-chips { display: flex; flex-wrap: wrap; gap: 6px; }
-button.adm-link { background: none; border: 0; padding: 0; font: inherit; font-weight: 600; color: var(--adm-primary-ink); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+/* A button, even one sitting inside a sentence, is a tap target: 44px tall,
+   inline-flex so the surrounding text still flows around it. */
+button.adm-link { background: none; border: 0; padding: 0 2px; font: inherit; font-weight: 600; color: var(--adm-primary-ink); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; display: inline-flex; align-items: center; min-block-size: 44px; vertical-align: middle; }
 .adm-media-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* Posts list: bulk selection */
 .adm-bulkbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; padding: 10px 14px; margin-block-end: 12px; background: var(--adm-surface); border: var(--adm-border-w) solid var(--adm-line); border-radius: var(--adm-radius); }
 .adm-bulkbar .adm-check { min-block-size: 44px; }
 .adm-col-check { inline-size: 44px; }
-.adm-rowcheck { inline-size: 20px; block-size: 20px; margin: 12px; accent-color: var(--adm-primary); }
+/* The checkbox stays 20px, but a tap lands on the 44x44 label wrapping it.
+   Margin is not a hit area, so the desktop margin alone did not count. */
+.adm-rowcheck-hit { display: inline-flex; align-items: center; justify-content: center; inline-size: 44px; block-size: 44px; }
+.adm-rowcheck { inline-size: 20px; block-size: 20px; margin: 0; accent-color: var(--adm-primary); }
 .adm-rowlink { color: var(--adm-ink); font-weight: 700; text-decoration: none; }
 .adm-rowlink:hover { color: var(--adm-primary-ink); text-decoration: underline; }
 @media (max-width: 767px) {
   .adm-table td.adm-col-check { grid-template-columns: 1fr; }
   .adm-table td.adm-col-check::before { content: none; }
-  .adm-rowcheck { margin: 4px 0; }
+  .adm-rowcheck-hit { justify-content: flex-start; }
 }
 
 /* Revisions */
@@ -750,7 +759,6 @@ button.adm-link { background: none; border: 0; padding: 0; font: inherit; font-w
 
 /* ---- Security manager (Phase 8) ---- */
 .adm-mono { overflow-wrap: anywhere; }
-.adm-sec-ua { display: block; max-inline-size: 100%; overflow-wrap: anywhere; }
 .adm-table td .adm-seo-flags { gap: 4px; }
 
 /* ---- Performance manager (Phase 9) ---- */

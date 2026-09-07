@@ -24,7 +24,7 @@ export function AssetReport({ rows, note }: { rows: AssetRow[]; note: string | n
           description="The home page hero plays three clips. This is what a visitor who watches the slider through one full cycle downloads."
         >
           <TableFrame>
-            <div className="adm-table-wrap">
+            <div className="adm-table-wrap" tabIndex={0}>
               <table className="adm-table adm-table-plain">
                 <caption className="adm-sr">The three hero videos and their sizes</caption>
                 <thead>
@@ -80,7 +80,7 @@ export function AssetReport({ rows, note }: { rows: AssetRow[]; note: string | n
       </div>
 
       <TableFrame>
-        <div className="adm-table-wrap">
+        <div className="adm-table-wrap" tabIndex={0}>
           <table className="adm-table">
             <caption className="adm-sr">Every public asset, largest first</caption>
             <thead>

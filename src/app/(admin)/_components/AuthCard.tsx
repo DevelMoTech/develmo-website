@@ -9,7 +9,8 @@ export function AuthCard({
 }) {
   return (
     <div className="adm-auth">
-      <section className="adm-auth-card" aria-labelledby="adm-auth-title">
+      {/* main, so the auth pages carry the one landmark the shell already has. */}
+      <main className="adm-auth-card" aria-labelledby="adm-auth-title">
         <div className="adm-auth-brand">
           <img src="/develmo-logo.png" alt="DevelMo" />
           <span>Admin console</span>
@@ -17,7 +18,7 @@ export function AuthCard({
         <h1 id="adm-auth-title">{title}</h1>
         {lead && <p className="adm-lead">{lead}</p>}
         {children}
-      </section>
+      </main>
     </div>
   );
 }

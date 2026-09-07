@@ -67,7 +67,7 @@ export function RobotsEditor({ initial, rendered, csrf, canWrite, robotsUrl }: {
         )}
       </form>
       <Card title="What will be served" description="The body above with the hard rule applied. Compare with the live file." actions={<a className="adm-btn adm-btn-ghost adm-btn-sm" href={robotsUrl} target="_blank" rel="noreferrer">Open robots.txt</a>}>
-        <pre className="adm-pre" aria-label="Rendered robots.txt">{preview}</pre>
+        <pre className="adm-pre" tabIndex={0} aria-label="Rendered robots.txt">{preview}</pre>
         {preview !== rendered && dirty && <p className="adm-help">Unsaved changes; the live file still matches what was saved last.</p>}
       </Card>
     </div>

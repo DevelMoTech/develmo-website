@@ -69,7 +69,7 @@ export function HeadersViewer({ csrf, initial }: { csrf: string; initial: Initia
       {report && (
         <div style={{ marginBlockStart: 18 }}>
           <TableFrame>
-            <div className="adm-table-wrap">
+            <div className="adm-table-wrap" tabIndex={0}>
               <table className="adm-table">
                 <caption className="adm-sr">Graded security headers</caption>
                 <thead>
@@ -114,7 +114,7 @@ export function HeadersViewer({ csrf, initial }: { csrf: string; initial: Initia
 
       {shown.length > 0 && (
         <Card title="Full response" description="Every header of interest, as received.">
-          <pre className="adm-pre" aria-label="Response headers">{shown.map(([k, v]) => `${k}: ${v}`).join("\n")}</pre>
+          <pre className="adm-pre" tabIndex={0} aria-label="Response headers">{shown.map(([k, v]) => `${k}: ${v}`).join("\n")}</pre>
         </Card>
       )}
     </>

@@ -102,7 +102,7 @@ export function UsersTable({ csrf, users, canManage, actorRole }: { csrf: string
   return (
     <div>
       {error && <Alert kind="error">{error}</Alert>}
-      <div className="adm-table-wrap" style={{ marginBlockStart: 14 }}>
+      <div className="adm-table-wrap" tabIndex={0} style={{ marginBlockStart: 14 }}>
         <table className="adm-table">
           <caption className="adm-sr">Staff accounts</caption>
           <thead>
@@ -211,7 +211,7 @@ export function InvitesTable({ csrf, invites }: { csrf: string; invites: InviteV
     <div>
       {error && <Alert kind="error">{error}</Alert>}
       {link && <p className="adm-mono" style={{ wordBreak: "break-all" }}>{link}</p>}
-      <div className="adm-table-wrap" style={{ marginBlockStart: 14 }}>
+      <div className="adm-table-wrap" tabIndex={0} style={{ marginBlockStart: 14 }}>
         <table className="adm-table">
           <caption className="adm-sr">Open invitations</caption>
           <thead>

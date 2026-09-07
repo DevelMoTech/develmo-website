@@ -114,6 +114,12 @@ export function BulkForm({ csrf, children, total }: { csrf: string; children: Re
   );
 }
 
+// The label is the tap target: a bare 20px checkbox is a 20 by 20 target, and
+// the margin around it is not clickable.
 export function RowCheckbox({ id, label }: { id: string; label: string }) {
-  return <input type="checkbox" name="ids" value={id} aria-label={`Select ${label}`} className="adm-rowcheck" />;
+  return (
+    <label className="adm-rowcheck-hit">
+      <input type="checkbox" name="ids" value={id} aria-label={`Select ${label}`} className="adm-rowcheck" />
+    </label>
+  );
 }

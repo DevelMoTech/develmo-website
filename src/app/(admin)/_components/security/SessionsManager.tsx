@@ -48,7 +48,7 @@ export function SessionsPanel({ sessions, csrf }: { sessions: SessionRow[]; csrf
       ) : (
         <div style={{ marginBlockEnd: 18 }}>
           <TableFrame>
-            <div className="adm-table-wrap">
+            <div className="adm-table-wrap" tabIndex={0}>
               <table className="adm-table">
                 <caption className="adm-sr">Active sessions</caption>
                 <thead>
@@ -150,7 +150,7 @@ export function UsersPanel({ users, csrf, actorId, actorRole }: { users: Oversig
     <>
       <Card title="Accounts" description="Force a sign out, a password change or a two-factor re-enrolment, and lock an account outright." className="adm-card" />
       <TableFrame>
-        <div className="adm-table-wrap">
+        <div className="adm-table-wrap" tabIndex={0}>
           <table className="adm-table">
             <caption className="adm-sr">Accounts and their controls</caption>
             <thead>

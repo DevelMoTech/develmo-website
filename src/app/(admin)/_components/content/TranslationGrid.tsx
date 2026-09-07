@@ -61,7 +61,7 @@ export function TranslationGrid({ params, rows, total, csrf, canWrite }: { param
 
   return (
     <>
-      <form className="adm-toolbar" method="get" action="/admin/translations" role="search">
+      <form className="adm-toolbar" method="get" action="/admin/translations" role="search" aria-label="Filter the translation keys">
         <div className="adm-field adm-field-q">
           <label className="adm-label" htmlFor="tr-q">Search keys and translations</label>
           <input id="tr-q" className="adm-input" type="search" name="q" defaultValue={params.q} />
@@ -88,7 +88,7 @@ export function TranslationGrid({ params, rows, total, csrf, canWrite }: { param
         <Card title="No keys match" description={params.view === "missing" ? "Nothing is missing for this filter, which is the result you want." : "Try a different search."} />
       ) : (
         <TableFrame>
-          <div className="adm-table-wrap">
+          <div className="adm-table-wrap" tabIndex={0}>
             <table className="adm-table">
               <caption className="adm-sr">Translation keys by locale</caption>
               <thead>
