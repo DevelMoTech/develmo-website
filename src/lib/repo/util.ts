@@ -6,7 +6,17 @@ import { unstable_cache } from "next/cache";
 //   3. never throws to the caller.
 // The public site keeps rendering, byte-identical, with the database down.
 
-const QUERY_TIMEOUT_MS = 3500;
+// setTimeout measures wall clock, and in development that includes the time
+// Turbopack spends compiling on the same event loop. A cold route takes 3 to
+// 33 seconds to compile here while the database itself answers in under 20ms,
+// so a production-tight bound made the first render of every route fall back
+// to the file data, trip the breaker, and then keep serving file data for the
+// cooldown: an edit made in the console looked like it had not saved.
+export function queryTimeoutMs(env: string | undefined = process.env.NODE_ENV): number {
+  return env === "production" ? 3500 : 30_000;
+}
+
+export const QUERY_TIMEOUT_MS = queryTimeoutMs();
 const DEFAULT_REVALIDATE_S = 300;
 
 // Per-instance circuit breaker: after repeated failures, skip the database for
@@ -69,7 +79,12 @@ export async function repoQuery<T>(opts: {
     return result;
   } catch (err) {
     breakerFail();
-    console.error(`[repo] falling back to src/lib data for ${opts.keys.join(":")}:`, err);
+    // A warning, not an error, and a string rather than the Error: the
+    // fallback is the designed behaviour and the page that renders is correct.
+    // Next forwards a server-side console.error into the browser in
+    // development, where it reads as a broken page.
+    const reason = err instanceof Error ? err.message : String(err);
+    console.warn(`[repo] ${opts.keys.join(":")} fell back to the typed file data: ${reason}`);
     return opts.fallback();
   }
 }

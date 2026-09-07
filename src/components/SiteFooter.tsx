@@ -167,7 +167,10 @@ export function SiteFooter({ locale }: { locale: string }) {
           <span>
             <Link href="/privacy">{tr("Privacy Policy")}</Link> ·{" "}
             <Link href="/terms">{tr("Terms of Service")}</Link> ·{" "}
-            <Link href="/cookies">{tr("Cookie Policy")}</Link>
+            <Link href="/cookies">{tr("Cookie Policy")}</Link> ·{" "}
+            {/* The way in to the admin console. robots.txt disallows /admin,
+                so this is for people, not crawlers. */}
+            <Link href="/admin/login">{tr("Admin")}</Link>
           </span>
         </div>
       </div>

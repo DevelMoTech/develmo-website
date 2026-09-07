@@ -28,6 +28,9 @@ const companyLinks = [
   { label: "Knowledge Base", href: "/our-knowledge-base" },
   { label: "Insights", href: "/our-blogs" },
   { label: "Contact", href: "/contact-develmo" },
+  // The admin console. Signed out it shows the sign-in form; there is no
+  // public sign-up anywhere, and robots.txt disallows /admin.
+  { label: "Staff sign in", href: "/admin/login" },
 ];
 
 export function MegaNav({ locale }: { locale: string }) {

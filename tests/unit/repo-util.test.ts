@@ -16,6 +16,7 @@ describe("repoQuery", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "warn").mockImplementation(() => {});
   });
 
   it("returns the query result when the database answers", async () => {
@@ -45,18 +46,32 @@ describe("repoQuery", () => {
   it("returns the fallback when the query hangs past the timeout", async () => {
     vi.useFakeTimers();
     try {
-      const { repoQuery } = await freshRepoUtil();
+      const { repoQuery, QUERY_TIMEOUT_MS } = await freshRepoUtil();
       const pending = repoQuery({
         keys: ["t", "hang"],
         tags: ["t"],
         query: () => new Promise<string[]>(() => {}),
         fallback: () => ["file"],
       });
-      await vi.advanceTimersByTimeAsync(4000);
+      // Past whatever bound the module chose for this environment, so the
+      // test keeps meaning the same thing in development and in production.
+      await vi.advanceTimersByTimeAsync(QUERY_TIMEOUT_MS + 500);
       expect(await pending).toEqual(["file"]);
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it("keeps the production timeout tight and the development one generous", async () => {
+    // In development setTimeout also measures the time Turbopack spends
+    // compiling on the same event loop, which is seconds for a cold route, so
+    // a production-tight bound made the first render of every route fall back
+    // to file data. Production must not inherit the generous bound: there the
+    // number is the point, it is how long a visitor waits on a sick database.
+    const { queryTimeoutMs } = await freshRepoUtil();
+    expect(queryTimeoutMs("production")).toBe(3500);
+    expect(queryTimeoutMs("development")).toBeGreaterThanOrEqual(30_000);
+    expect(queryTimeoutMs("test")).toBeGreaterThanOrEqual(30_000);
   });
 
   it("opens the circuit breaker after repeated failures and skips the query", async () => {

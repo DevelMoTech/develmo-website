@@ -188,6 +188,11 @@ export type DeadLink = { list: "primary" | "company"; index: number; label: stri
 // The guard the brief asks for: a menu is refused if any link points at a
 // route that does not resolve. Absolute and mailto links are outside this
 // site, so they are accepted as typed; every site path must be a real route.
+// The public menu carries exactly one link into the console. It is a real
+// page, but not a public route, so listPublicRoutes never contains it. Any
+// other /admin path in a public menu is still refused.
+const CONSOLE_SIGN_IN = "/admin/login";
+
 export async function findDeadLinks(nav: NavigationInput): Promise<DeadLink[]> {
   const routes = new Set((await listPublicRoutes()).map((r) => r.path));
   const dead: DeadLink[] = [];
@@ -195,6 +200,7 @@ export async function findDeadLinks(nav: NavigationInput): Promise<DeadLink[]> {
     nav[list].forEach((link, index) => {
       if (/^(https?:\/\/|mailto:)/i.test(link.href)) return;
       const path = link.href.split(/[?#]/)[0].replace(/\/+$/, "") || "/";
+      if (path === CONSOLE_SIGN_IN) return;
       if (!routes.has(path)) dead.push({ list, index, label: link.label, href: link.href });
     });
   }

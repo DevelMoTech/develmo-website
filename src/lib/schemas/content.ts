@@ -168,6 +168,7 @@ export const DEFAULT_NAVIGATION: NavigationInput = {
     { label: "Knowledge Base", href: "/our-knowledge-base" },
     { label: "Insights", href: "/our-blogs" },
     { label: "Contact", href: "/contact-develmo" },
+    { label: "Staff sign in", href: "/admin/login" },
   ],
 };
 
