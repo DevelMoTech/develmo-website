@@ -290,6 +290,16 @@ then check the database is awake. Neon suspends idle databases on the free
 tier; the first request after a suspend can time out. The public site is
 unaffected.
 
+**A console error that starts `revalidating cache with key:` followed by
+`Failed query: select ... from "settings"`.** This is Next itself, not the
+site's code. A public page had already cached a value from the database; the
+database then became unreachable; Next served the cached value and tried to
+refresh it in the background, and it logs that failed refresh with
+`console.error`, which the development overlay presents as if the page were
+broken. The page is fine, it is showing the last good data. The cure is the
+same as above: make sure the database is reachable. Locally, the portable
+Postgres is usually stopped after a reboot; start it and reload.
+
 **Invitations and password resets are not arriving.** `RESEND_API_KEY` is
 unset or wrong. The server log prints
 `[email] RESEND_API_KEY unset, not sent -> ...` for every message it did not

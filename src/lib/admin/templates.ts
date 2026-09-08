@@ -45,7 +45,9 @@ export async function getTemplate(key: TemplateKey): Promise<Template> {
     const row = (await getDb().select().from(emailTemplates).where(eq(emailTemplates.key, key)).limit(1))[0];
     if (row) return { subject: row.subject, body: row.bodyMd };
   } catch (err) {
-    console.error("[templates] read failed, using default", key, err);
+    // Designed fallback, so a warning with a message rather than an Error
+    // object that the dev overlay would show as a broken page.
+    console.warn(`[templates] ${key} read failed, using the default: ${err instanceof Error ? err.message : String(err)}`);
   }
   return DEFAULT_TEMPLATES[key];
 }

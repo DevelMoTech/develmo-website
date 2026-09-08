@@ -70,7 +70,10 @@ export async function getSetting<K extends SettingKey>(key: K): Promise<z.infer<
       if (parsed.success) return parsed.data as z.infer<(typeof SCHEMAS)[K]>;
     }
   } catch (err) {
-    console.error("[settings] read failed, using default", key, err);
+    // A warning with a message, not console.error with the Error: this is the
+    // designed fallback, and Next forwards a server console.error into the
+    // browser in development, where it reads as a broken page.
+    console.warn(`[settings] ${key} read failed, using the default: ${err instanceof Error ? err.message : String(err)}`);
   }
   return DEFAULTS[key];
 }

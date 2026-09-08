@@ -137,7 +137,9 @@ async function windowHit(key: LimiterKey, identity: string, limit: Limit, consum
       count = rows[0]?.count ?? 0;
     }
   } catch (err) {
-    console.error("[ratelimit] database unavailable, using per-instance window:", err);
+    // Designed fallback: the limiter keeps working from memory. A warning
+    // with a message, so the dev overlay does not present it as a crash.
+    console.warn(`[ratelimit] database unavailable, using the per-instance window: ${err instanceof Error ? err.message : String(err)}`);
     count = memoryHit(rowKey, expiresAt.getTime(), consume);
   }
   // A consumed hit is over the limit once it exceeds max; a peek is "limited"
