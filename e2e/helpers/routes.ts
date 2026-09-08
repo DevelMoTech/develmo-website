@@ -55,6 +55,7 @@ export const SHELL_ROUTES = [
   "/admin/seo/schema",
   "/admin/seo/sitemap",
   "/admin/settings",
+  "/admin/settings/email",
   "/admin/submissions",
   "/admin/submissions/spam",
   "/admin/translations",

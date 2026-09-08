@@ -265,11 +265,24 @@ const IGNORE = [
 ];
 
 function capture(page: Page, sink: string[], routeRef: { route: string }) {
+  // Chrome logs a failed resource load as a bare "Failed to load resource"
+  // with no URL. The URL arrives separately on requestfailed, so keep the
+  // last one: a third-party script that Google's CDN dropped mid-handshake
+  // (ERR_QUIC_PROTOCOL_ERROR) is not a defect in this site, while a failed
+  // load from this origin still is.
+  let lastFailedUrl = "";
+  page.on("requestfailed", (r) => {
+    lastFailedUrl = r.url();
+  });
   page.on("console", (m: ConsoleMessage) => {
     const type = m.type();
     if (type !== "error" && type !== "warning") return;
     const text = m.text();
     if (IGNORE.some((re) => re.test(text))) return;
+    if (/^Failed to load resource/.test(text) && lastFailedUrl && !lastFailedUrl.startsWith(new URL(page.url()).origin)) {
+      console.log(`third-party load failure ignored on ${routeRef.route}: ${lastFailedUrl.slice(0, 80)} (${text.slice(0, 60)})`);
+      return;
+    }
     sink.push(`${routeRef.route} [${type}] ${text.slice(0, 240)}`);
   });
   page.on("pageerror", (e) => sink.push(`${routeRef.route} [pageerror] ${e.message.slice(0, 240)}`));

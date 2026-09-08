@@ -376,6 +376,17 @@ someone is a user. It is rate limited to three per hour per address, carries
 the same honeypot and reCAPTCHA as the contact form, and the dead-link guard
 on the navigation editor accepts `/admin/login` but no other `/admin` path.
 
+Every new request emails the address in `/admin/settings/email`, which
+defaults to `CONTACT_TO` and then to `s.shahzeb8874@gmail.com`, the inbox the
+contact form already uses. The message takes the contact form's road, Resend,
+then the webhook, then FormSubmit (`src/lib/notify.ts`), and the outcome is
+written to the request row and shown in the queue as "Admin told", with a
+button to send it again. The same page sends a real test message and reports
+which channel carried it or why each one refused, because deliverability here
+depends on things only the owner holds: a Resend key, a verified sending
+domain, and the FormSubmit activation click. Invitations themselves go
+through Resend only.
+
 ### 11.5 Data model
 
 The groups that matter:

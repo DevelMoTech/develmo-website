@@ -113,6 +113,8 @@ const CASES: Case[] = [
   // ---- access requests ----
   { name: "accessRequestSchema", schema: access.accessRequestSchema, ok: { name: "Ada Lovelace", email: "ada@lovelace.test", reason: "I need to publish the launch post." }, bad: { name: "Ada Lovelace", email: "ada@lovelace.test", reason: "too short" } },
   { name: "accessDecisionSchema", schema: access.accessDecisionSchema, ok: { id: UUID, decision: "approve", role: "editor" }, bad: { id: UUID, decision: "approve" } },
+  { name: "accessNotifySchema", schema: access.accessNotifySchema, ok: { notifyEmail: " Admin@DevelMo.com " }, bad: { notifyEmail: "admin at develmo" } },
+  { name: "accessRequestIdSchema", schema: access.accessRequestIdSchema, ok: { id: UUID }, bad: { id: "latest" } },
 
   // ---- auth ----
   { name: "emailSchema", schema: auth.emailSchema, ok: "  Ada@Lovelace.TEST ", bad: "ada@lovelace" },

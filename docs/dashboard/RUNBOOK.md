@@ -278,6 +278,8 @@ that commit gives you the site exactly as it was before this work started.
 | An enquiry did not arrive by email | `/admin/submissions/<id>`, Delivery, Replay. The row was stored before delivery was attempted, so nothing is ever lost |
 | Publish a post later | `/admin/posts/<id>`, Publishing, set a date. Vercel Cron publishes it |
 | Block an abusive address | `/admin/security/access`. The console refuses to block the address you are connected from without a typed confirmation |
+| Change who is told about access requests | `/admin/settings/email`. Defaults to `s.shahzeb8874@gmail.com`, the same inbox the contact form uses |
+| Check that email actually arrives | `/admin/settings/email`, Send a test. It reports the channel that carried it, or every failure |
 | Check what changed and who did it | `/admin/audit`. Append only, with no delete path anywhere in the code |
 | Dependency vulnerabilities | `/admin/security/dependencies`, Scan |
 
@@ -304,6 +306,30 @@ Postgres is usually stopped after a reboot; start it and reload.
 unset or wrong. The server log prints
 `[email] RESEND_API_KEY unset, not sent -> ...` for every message it did not
 send.
+
+**Emails are not being delivered.** Open `/admin/settings/email` and press
+"Send a test". It sends a real message to the configured admin address and
+tells you exactly which channel carried it, or why every channel refused. The
+chain is Resend, then the webhook, then FormSubmit, the same road the contact
+form takes. What each one needs:
+
+- **Resend**: `RESEND_API_KEY` set, and `CONTACT_FROM` on a domain you have
+  verified in Resend. The default sender `onboarding@resend.dev` only delivers
+  to the email address that owns the Resend account, which is fine for a test
+  and useless for anyone else. Verifying develmo.com means adding Resend's
+  DKIM and SPF records at Hostinger, which touches the mail DNS that
+  `HANDOFF.md` Appendix B says must stay untouched: that is your call, not
+  something a contributor should do.
+- **Webhook**: `CONTACT_WEBHOOK_URL`, for your own automation.
+- **FormSubmit**: needs no key, but each recipient address must have clicked
+  the activation email FormSubmit sends the first time it is used. The
+  activation for `s.shahzeb8874@gmail.com` was still pending when the site was
+  handed over; the first real message triggers it.
+
+Invitations to new people go through Resend only, because FormSubmit can
+only reach addresses that have activated it. Until `RESEND_API_KEY` is set,
+approving a request still creates the invitation and shows you the link to
+pass on by hand.
 
 **Locked out of the Owner account.** If you still have a recovery code, use it
 at the second factor prompt. If not, and no other Owner or Admin can help,

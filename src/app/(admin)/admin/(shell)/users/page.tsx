@@ -5,6 +5,7 @@ import { Badge, Card, PageHeader } from "@/app/(admin)/_components/ui/Basics";
 import { getCsrfToken, requirePageUser } from "@/lib/auth/current";
 import { listAccessRequests } from "@/lib/auth/access-requests";
 import { listInvites, listUsers } from "@/lib/auth/flows";
+import { getSetting } from "@/lib/admin/settings";
 import { can, invitableRoles } from "@/lib/auth/rbac";
 
 export const metadata: Metadata = { title: "Users" };
@@ -19,7 +20,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
   const q = (sp.q ?? "").trim().toLowerCase().slice(0, 160);
   const csrf = await getCsrfToken();
   const canManage = can(user.role, "users:manage");
-  const [users, invites, accessRequests] = await Promise.all([listUsers(), canManage ? listInvites() : Promise.resolve([]), listAccessRequests()]);
+  const [users, invites, accessRequests, notify] = await Promise.all([listUsers(), canManage ? listInvites() : Promise.resolve([]), listAccessRequests(), getSetting("access_requests")]);
 
   const userRows: UserView[] = users
     .filter((u) => !q || u.email.toLowerCase().includes(q) || u.name.toLowerCase().includes(q))
@@ -44,6 +45,9 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
     decidedBy: r.decidedBy,
     decidedAt: fmt(r.decidedAt),
     decisionNote: r.decisionNote,
+    notifiedAt: r.notifiedAt ? fmt(r.notifiedAt) : null,
+    notifyChannel: r.notifyChannel,
+    notifyError: r.notifyError,
     createdAt: fmt(r.createdAt),
   }));
   const pendingRequests = requestRows.filter((r) => r.status === "pending").length;
@@ -75,7 +79,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
         description="Submitted from the public form at /admin/request-access. Approving sends the same single use invitation as above; declining sends no email."
         actions={pendingRequests > 0 ? <Badge tone="warn">{pendingRequests} waiting</Badge> : undefined}
       >
-        <AccessRequests csrf={csrf} requests={requestRows} invitable={invitableRoles(user.role)} canManage={canManage} />
+        <AccessRequests csrf={csrf} requests={requestRows} invitable={invitableRoles(user.role)} canManage={canManage} notifyEmail={notify.notifyEmail} />
       </Card>
     </>
   );

@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { ModuleOverview } from "@/app/(admin)/_components/ModuleOverview";
+import { Card } from "@/app/(admin)/_components/ui/Basics";
 import { moduleCounts } from "@/app/(admin)/_lib/stats";
 import { requirePageUser } from "@/lib/auth/current";
 
@@ -22,6 +24,14 @@ export default async function SettingsPage() {
         title: "Everything is on its default",
         body: "No setting has been changed from the code defaults. Values saved here take effect without a deploy.",
       }}
-    />
+    >
+      <div className="adm-grid" style={{ marginBlockStart: 18 }}>
+        <Card
+          title="Email delivery"
+          description="Who is told about access requests, which channels can carry email from this deployment, and a button that sends a real test."
+          actions={<Link className="adm-btn adm-btn-ghost adm-btn-sm" href="/admin/settings/email">Open</Link>}
+        />
+      </div>
+    </ModuleOverview>
   );
 }

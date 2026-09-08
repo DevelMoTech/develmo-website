@@ -41,3 +41,18 @@ export const accessDecisionSchema = z
     message: "Choose the role to invite them as",
   });
 export type AccessDecisionInput = z.infer<typeof accessDecisionSchema>;
+
+// Who is told when a request arrives. One address, editable in the console;
+// the default is the same address the contact form delivers to.
+export const accessNotifySchema = z.object({
+  notifyEmail: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .min(3)
+    .max(160)
+    .refine((v) => emailRe.test(v), "Enter a valid email address"),
+});
+export type AccessNotifyInput = z.infer<typeof accessNotifySchema>;
+
+export const accessRequestIdSchema = z.object({ id: z.string().uuid() });

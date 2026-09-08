@@ -129,6 +129,12 @@ export const accessRequests = pgTable(
     // Stored hashed with the server-side salt, for abuse prevention only.
     ipHash: text("ip_hash"),
     userAgent: text("user_agent"),
+    // The admin notification for this request: when it went, through which
+    // channel, and the last error when it did not. Deliverability is a fact
+    // to record, not something to assume.
+    notifiedAt: timestamp("notified_at", { withTimezone: true }),
+    notifyChannel: text("notify_channel"),
+    notifyError: text("notify_error"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },

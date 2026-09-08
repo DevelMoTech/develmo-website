@@ -1,6 +1,9 @@
 import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import { getDb } from "@/db";
 import { accessRequests, users } from "@/db/schema";
+import { getSetting } from "@/lib/admin/settings";
+import { siteUrl } from "@/lib/email";
+import { deliverNotice, type NoticeOutcome } from "@/lib/notify";
 import type { AccessDecisionInput, AccessRequestInput } from "@/lib/schemas/access";
 import { createInvite, type Actor, type Ctx } from "./flows";
 import { audit } from "./log";
@@ -23,6 +26,9 @@ export type AccessRequestView = {
   decidedBy: string | null;
   decidedAt: Date | null;
   decisionNote: string;
+  notifiedAt: Date | null;
+  notifyChannel: string | null;
+  notifyError: string | null;
   createdAt: Date;
 };
 
@@ -32,13 +38,13 @@ export type AccessRequestView = {
 export async function recordAccessRequest(
   input: AccessRequestInput,
   ctx: { ipHash: string | null; userAgent: string | null },
-): Promise<{ stored: boolean }> {
+): Promise<{ stored: boolean; id: string | null }> {
   const db = getDb();
 
   // Someone who already has an account does not need a request; say nothing
   // and store nothing, so the form cannot be used to test for addresses.
   const [existingUser] = await db.select({ id: users.id }).from(users).where(eq(users.email, input.email)).limit(1);
-  if (existingUser) return { stored: false };
+  if (existingUser) return { stored: false, id: null };
 
   const [open] = await db
     .select({ id: accessRequests.id })
@@ -58,18 +64,70 @@ export async function recordAccessRequest(
         updatedAt: new Date(),
       })
       .where(eq(accessRequests.id, open.id));
-    return { stored: true };
+    return { stored: true, id: open.id };
   }
 
-  await db.insert(accessRequests).values({
-    name: input.name,
-    email: input.email,
-    organisation: input.organisation ?? "",
-    reason: input.reason,
-    ipHash: ctx.ipHash,
-    userAgent: ctx.userAgent,
-  });
-  return { stored: true };
+  const [row] = await db
+    .insert(accessRequests)
+    .values({
+      name: input.name,
+      email: input.email,
+      organisation: input.organisation ?? "",
+      reason: input.reason,
+      ipHash: ctx.ipHash,
+      userAgent: ctx.userAgent,
+    })
+    .returning({ id: accessRequests.id });
+  return { stored: true, id: row.id };
+}
+
+// Tells the configured admin address that a request is waiting. Runs after
+// the public response, and again on demand from the console. The outcome is
+// written to the row whatever it was, so the queue shows whether anyone was
+// actually told. Never throws.
+export async function notifyAdminOfRequest(id: string): Promise<NoticeOutcome | null> {
+  const db = getDb();
+  const [row] = await db.select().from(accessRequests).where(eq(accessRequests.id, id)).limit(1);
+  if (!row) return null;
+  const { notifyEmail } = await getSetting("access_requests");
+  const decideUrl = `${siteUrl()}/admin/users`;
+
+  let outcome: NoticeOutcome;
+  try {
+    outcome = await deliverNotice({
+      to: notifyEmail,
+      replyTo: row.email,
+      subject: `Access request from ${row.name}`,
+      text: [
+        `${row.name} <${row.email}> has asked for access to the DevelMo admin console.`,
+        row.organisation ? `Company or team: ${row.organisation}` : "",
+        "",
+        "Why they need it:",
+        row.reason,
+        "",
+        `Approve or decline it here: ${decideUrl}`,
+        "",
+        "Approving sends them a single use invitation. Declining sends nothing.",
+      ]
+        .filter((line, i, all) => line !== "" || all[i - 1] !== "")
+        .join("\n"),
+      fields: { name: row.name, email: row.email, organisation: row.organisation || "Not given", reason: row.reason, decide: decideUrl },
+    });
+  } catch (err) {
+    outcome = { status: "failed", channel: null, error: err instanceof Error ? err.message : String(err) };
+  }
+
+  await db
+    .update(accessRequests)
+    .set({
+      notifiedAt: outcome.status === "sent" ? new Date() : row.notifiedAt,
+      notifyChannel: outcome.status === "sent" ? outcome.channel : row.notifyChannel,
+      notifyError: outcome.status === "sent" ? null : outcome.error,
+      updatedAt: new Date(),
+    })
+    .where(eq(accessRequests.id, id));
+  if (outcome.status === "failed") console.warn(`[access-request] admin notification for ${id} failed: ${outcome.error}`);
+  return outcome;
 }
 
 export async function listAccessRequests(limit = 100): Promise<AccessRequestView[]> {
@@ -83,6 +141,9 @@ export async function listAccessRequests(limit = 100): Promise<AccessRequestView
       status: accessRequests.status,
       decidedAt: accessRequests.decidedAt,
       decisionNote: accessRequests.decisionNote,
+      notifiedAt: accessRequests.notifiedAt,
+      notifyChannel: accessRequests.notifyChannel,
+      notifyError: accessRequests.notifyError,
       createdAt: accessRequests.createdAt,
       decidedBy: users.email,
     })

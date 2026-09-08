@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { Role } from "@/lib/auth/rbac";
+import type { NoticeOutcome } from "@/lib/notify";
 import { useSubmit } from "./api-client";
 import { Alert, Badge } from "./ui/Basics";
 import { Button } from "./ui/Button";
@@ -17,6 +18,9 @@ export type AccessRequestRow = {
   decidedBy: string | null;
   decidedAt: string | null;
   decisionNote: string;
+  notifiedAt: string | null;
+  notifyChannel: string | null;
+  notifyError: string | null;
   createdAt: string;
 };
 
@@ -24,8 +28,9 @@ const TONE = { pending: "warn", approved: "ok", declined: "muted" } as const;
 
 // The queue behind the public request form. Approving mints the same
 // single-use invite the form above mints, so nothing here is a shortcut into
-// the console.
-export function AccessRequests({ csrf, requests, invitable, canManage }: { csrf: string; requests: AccessRequestRow[]; invitable: Role[]; canManage: boolean }) {
+// the console. Each row also says whether the admin was actually told about
+// it, because a request nobody hears about is a request nobody decides.
+export function AccessRequests({ csrf, requests, invitable, canManage, notifyEmail }: { csrf: string; requests: AccessRequestRow[]; invitable: Role[]; canManage: boolean; notifyEmail: string }) {
   const { run, pending, error } = useSubmit();
   const toast = useToast();
   const [rows, setRows] = useState(requests);
@@ -56,8 +61,26 @@ export function AccessRequests({ csrf, requests, invitable, canManage }: { csrf:
     });
   }
 
+  async function notify(row: AccessRequestRow) {
+    const res = await run<{ outcome: NoticeOutcome }>("/api/admin/users/access-request/notify", { id: row.id }, csrf);
+    if (!res?.data.ok) {
+      toast({ kind: "error", title: "Notification not sent", body: error ?? undefined });
+      return;
+    }
+    const o = res.data.outcome;
+    setRows((r) =>
+      r.map((x) =>
+        x.id === row.id
+          ? { ...x, notifiedAt: o.status === "sent" ? "just now" : x.notifiedAt, notifyChannel: o.status === "sent" ? o.channel : x.notifyChannel, notifyError: o.status === "sent" ? null : o.error }
+          : x,
+      ),
+    );
+    if (o.status === "sent") toast({ kind: "success", title: `${notifyEmail} notified via ${o.channel}` });
+    else toast({ kind: "error", title: `${notifyEmail} was not notified`, body: o.error ?? undefined });
+  }
+
   if (rows.length === 0) {
-    return <p className="adm-empty">No access requests. The form at /admin/request-access feeds this queue.</p>;
+    return <p className="adm-empty">No access requests. The form at /admin/request-access feeds this queue, and each new request emails {notifyEmail}.</p>;
   }
 
   return (
@@ -73,6 +96,7 @@ export function AccessRequests({ csrf, requests, invitable, canManage }: { csrf:
               <th scope="col">Reason</th>
               <th scope="col">Requested</th>
               <th scope="col">Status</th>
+              <th scope="col">Admin told</th>
               {canManage && <th scope="col"><span className="adm-sr">Decision</span></th>}
             </tr>
           </thead>
@@ -89,6 +113,24 @@ export function AccessRequests({ csrf, requests, invitable, canManage }: { csrf:
                 <td data-label="Status">
                   <Badge tone={TONE[row.status]}>{row.status}</Badge>
                   {row.status !== "pending" && row.decidedBy && <div className="adm-help">by {row.decidedBy}</div>}
+                </td>
+                <td data-label="Admin told">
+                  {row.notifiedAt ? (
+                    <>
+                      <Badge tone="ok">yes</Badge>
+                      <div className="adm-help">{row.notifiedAt} via {row.notifyChannel}</div>
+                    </>
+                  ) : (
+                    <>
+                      <Badge tone="danger">no</Badge>
+                      {row.notifyError && <div className="adm-help" style={{ overflowWrap: "anywhere" }}>{row.notifyError}</div>}
+                    </>
+                  )}
+                  {canManage && row.status === "pending" && (
+                    <div className="adm-actions" style={{ marginBlockStart: 6 }}>
+                      <Button size="sm" variant="ghost" disabled={pending} onClick={() => notify(row)}>{row.notifiedAt ? "Notify again" : "Notify now"}</Button>
+                    </div>
+                  )}
                 </td>
                 {canManage && (
                   <td className="adm-td-actions">

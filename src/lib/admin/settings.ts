@@ -8,6 +8,7 @@ import { organizationFactsSchema, robotsBodySchema } from "@/lib/schemas/seo";
 import { DEFAULT_SECURITY_RETENTION, DEFAULT_TURNSTILE, securityRetentionSchema, turnstileSchema } from "@/lib/schemas/security";
 import { DEFAULT_MEDIA_SETTINGS, mediaSettingsSchema } from "@/lib/schemas/performance";
 import { DEFAULT_NAVIGATION, navigationSchema } from "@/lib/schemas/content";
+import { accessNotifySchema, type AccessNotifyInput } from "@/lib/schemas/access";
 
 // Key-value settings (brief §3.11) with a zod schema per key. Reads fall back
 // to the default on a missing row or a database error, so the site never
@@ -48,7 +49,13 @@ const SCHEMAS = {
   security_retention: securityRetentionSchema,
   media: mediaSettingsSchema,
   navigation: navigationSchema,
+  access_requests: accessNotifySchema,
 } as const;
+
+// Who is told about a new access request. The default is the address the
+// contact form already delivers to, so out of the box both kinds of "someone
+// wants something from us" land in the same inbox.
+export const DEFAULT_ACCESS_NOTIFY: AccessNotifyInput = { notifyEmail: process.env.CONTACT_TO || "s.shahzeb8874@gmail.com" };
 const DEFAULTS: { [K in keyof typeof SCHEMAS]: z.infer<(typeof SCHEMAS)[K]> } = {
   retention: DEFAULT_RETENTION,
   reply_template: DEFAULT_REPLY_TEMPLATE,
@@ -59,6 +66,7 @@ const DEFAULTS: { [K in keyof typeof SCHEMAS]: z.infer<(typeof SCHEMAS)[K]> } = 
   security_retention: DEFAULT_SECURITY_RETENTION,
   media: DEFAULT_MEDIA_SETTINGS,
   navigation: DEFAULT_NAVIGATION,
+  access_requests: DEFAULT_ACCESS_NOTIFY,
 };
 export type SettingKey = keyof typeof SCHEMAS;
 

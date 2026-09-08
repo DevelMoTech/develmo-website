@@ -1,5 +1,5 @@
-import { NextResponse, type NextRequest } from "next/server";
-import { recordAccessRequest } from "@/lib/auth/access-requests";
+import { after, NextResponse, type NextRequest } from "next/server";
+import { notifyAdminOfRequest, recordAccessRequest } from "@/lib/auth/access-requests";
 import { getClientIp, hashIp } from "@/lib/auth/ip";
 import { securityEvent } from "@/lib/auth/log";
 import { consumeLimit, retryAfterSeconds } from "@/lib/ratelimit";
@@ -59,7 +59,13 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    await recordAccessRequest(parsed.data, { ipHash, userAgent });
+    const stored = await recordAccessRequest(parsed.data, { ipHash, userAgent });
+    // The admin is told after the response, so a slow mail provider never
+    // holds the form open. The outcome is recorded on the row either way.
+    if (stored.stored && stored.id) {
+      const id = stored.id;
+      after(() => notifyAdminOfRequest(id));
+    }
   } catch (err) {
     console.error("[access-request] could not store the request", err);
     return NextResponse.json({ ok: false, error: "Could not submit the request. Please try again." }, { status: 500 });

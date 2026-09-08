@@ -237,3 +237,65 @@ test("the honeypot and the rate limit hold, and Editor and Viewer cannot decide"
   }
   await anon.close();
 });
+
+test("every request records whether the admin was told, the address is configurable, and a test send reports honestly", async ({ browser, baseURL }) => {
+  test.setTimeout(120_000);
+  const owner = await signedIn(browser, baseURL!, "owner");
+  const post = (path: string, data: Record<string, unknown>) =>
+    owner.request.post(`${baseURL}${path}`, { headers: { "x-csrf-token": owner.csrf, "content-type": "application/json", origin: baseURL! }, data });
+
+  // Point the notification at a known address for the duration of the test.
+  const address = `approver-${RUN}@example.com`;
+  const saved = await post("/api/admin/settings/email", { notifyEmail: address });
+  expect(saved.status()).toBe(200);
+  const stored = await db().query<{ value: { notifyEmail: string } }>(`select value from settings where key = 'access_requests'`);
+  expect(stored.rows[0]?.value.notifyEmail).toBe(address);
+
+  // A new request is followed by a notification attempt, made after the
+  // response. Its outcome, whatever it was, is written to the row.
+  const anon = await browser.newContext();
+  const email = `notified-${RUN}@example.com`;
+  const res = await request(anon.request, baseURL!, { name: "Grace Hopper", email, reason: "I need to edit the knowledge base articles.", recaptchaToken: await mintToken(browser, baseURL!) });
+  expect(res.status()).toBe(200);
+  await expect
+    .poll(async () => {
+      const r = await db().query<{ notified_at: Date | null; notify_error: string | null }>(`select notified_at, notify_error from access_requests where email = $1`, [email]);
+      const row = r.rows[0];
+      return row ? (row.notified_at !== null || row.notify_error !== null) : false;
+    }, { timeout: 20_000, message: "the notification outcome was recorded on the request" })
+    .toBe(true);
+  const recorded = await db().query<{ notified_at: Date | null; notify_channel: string | null; notify_error: string | null }>(`select notified_at, notify_channel, notify_error from access_requests where email = $1`, [email]);
+  const outcome = recorded.rows[0];
+  console.log(`ACCESS REQUEST: admin notification recorded as ${outcome.notified_at ? `sent via ${outcome.notify_channel}` : `failed: ${outcome.notify_error}`}`);
+
+  // Notify again on demand, from the console, with the same honest outcome.
+  const row = await rowFor(email);
+  const again = await post("/api/admin/users/access-request/notify", { id: row!.id });
+  expect(again.status()).toBe(200);
+  const body = (await again.json()) as { ok: boolean; outcome: { status: string; channel: string | null; error: string | null } };
+  expect(["sent", "failed"]).toContain(body.outcome.status);
+  if (body.outcome.status === "failed") expect(body.outcome.error, "a failure names every channel that refused").toMatch(/formsubmit:/);
+
+  // The settings page can send a real test to the configured address.
+  const testSend = await post("/api/admin/settings/email/test", {});
+  expect(testSend.status()).toBe(200);
+  const sent = (await testSend.json()) as { ok: boolean; to: string; outcome: { status: string; error: string | null } };
+  expect(sent.to).toBe(address);
+  expect(["sent", "failed"]).toContain(sent.outcome.status);
+  console.log(`ACCESS REQUEST: test email to ${sent.to} reported ${sent.outcome.status}${sent.outcome.error ? ` (${sent.outcome.error})` : ""}`);
+
+  // Editors and Viewers can neither change the address nor resend.
+  for (const role of ["editor", "viewer"] as const) {
+    const who = await signedIn(browser, baseURL!, role);
+    const headers = { "x-csrf-token": who.csrf, "content-type": "application/json", origin: baseURL! };
+    expect((await who.request.post(`${baseURL}/api/admin/settings/email`, { headers, data: { notifyEmail: "x@y.test" } })).status(), `${role} cannot change the address`).toBe(403);
+    expect((await who.request.post(`${baseURL}/api/admin/settings/email/test`, { headers, data: {} })).status(), `${role} cannot send a test`).toBe(403);
+    expect((await who.request.post(`${baseURL}/api/admin/users/access-request/notify`, { headers, data: { id: row!.id } })).status(), `${role} cannot resend a notification`).toBe(403);
+    await who.context.close();
+  }
+
+  // Back to the default so the next run starts clean.
+  await db().query(`delete from settings where key = 'access_requests'`);
+  await anon.close();
+  await owner.context.close();
+});
