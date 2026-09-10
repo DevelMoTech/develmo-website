@@ -293,14 +293,27 @@ tier; the first request after a suspend can time out. The public site is
 unaffected.
 
 **A console error that starts `revalidating cache with key:` followed by
-`Failed query: select ... from "settings"`.** This is Next itself, not the
-site's code. A public page had already cached a value from the database; the
-database then became unreachable; Next served the cached value and tried to
-refresh it in the background, and it logs that failed refresh with
-`console.error`, which the development overlay presents as if the page were
-broken. The page is fine, it is showing the last good data. The cure is the
-same as above: make sure the database is reachable. Locally, the portable
-Postgres is usually stopped after a reboot; start it and reload.
+`Failed query: select ...`.** This is Next itself, not the site's code. A
+public page had cached a value from the database; the database then became
+unreachable; Next served the cached value and tried to refresh it in the
+background, and it logs that failed refresh with `console.error`, which the
+development overlay presents as if the page were broken. The page is fine.
+
+Two things soften it. The repository layer keeps the last value the database
+gave for each query (`src/lib/repo/util.ts`), so an outage that begins while
+the server is up hands that value back with a `[repo] ... kept the last value
+the database gave` warning and no error at all. That memory is per process,
+so it cannot cover an entry another process wrote: a page prerendered at
+build time, or a persisted entry found by a server that started while the
+database was already down, which is the usual shape of it locally. For that
+case, in development only, `src/instrumentation.ts` turns Next's line into a
+warning with the same detail, so the overlay stops presenting a served page
+as broken. In production the line stays an error, because an unrefreshable
+cache during a database outage is worth alerting on.
+
+Either way the cure is the same as above: make sure the database is
+reachable. Locally, the portable Postgres is usually stopped after a reboot;
+start it and reload.
 
 **Invitations and password resets are not arriving.** `RESEND_API_KEY` is
 unset or wrong. The server log prints
