@@ -68,9 +68,10 @@ export function Shell({
 
       <aside className="adm-side" id="adm-sidebar" aria-label="Console navigation">
         <div className="adm-side-head">
+          {/* The logo carries the wordmark, so it is the link's whole
+              accessible name; no text beside it. */}
           <Link href="/admin" className="adm-side-brand" onClick={() => closeDrawer()}>
-            <img src="/develmo-logo-white.png" alt="" />
-            <span>DevelMo Admin</span>
+            <img src="/develmo-logo-white.png" alt="DevelMo Admin" />
           </Link>
           <button type="button" className="adm-iconbtn adm-side-close" aria-label="Close menu" onClick={() => closeDrawer(true)}>
             <Icon name="close" />
