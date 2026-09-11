@@ -13,43 +13,11 @@ import { Icon } from "../ui/Icon";
 import { ConfirmDialog, Modal } from "../ui/Modal";
 import { useToast } from "../ui/Toast";
 import { formatBytes } from "./MediaPicker";
+import { upload, uploadMessage } from "./upload-client";
 
 export type LibraryItem = MediaView & { usage: Usage[] };
 
 type UploadState = { id: number; name: string; progress: number; status: "uploading" | "done" | "error"; message?: string };
-
-const UPLOAD_ERRORS: Record<string, string> = {
-  svg_rejected: "SVG files are not accepted: they can carry scripts. Export a PNG or JPEG instead.",
-  unsupported_type: "Only JPEG, PNG, GIF and WebP images are accepted. The file's bytes decide, not its name.",
-  too_large: `Larger than the ${Math.round(MAX_UPLOAD_BYTES / (1024 * 1024))} MB limit.`,
-  empty: "The file is empty.",
-  type_mismatch: "A replacement must be the same format as the original so the URL keeps working.",
-};
-
-function uploadMessage(status: number, code?: string): string {
-  return (code && UPLOAD_ERRORS[code]) || describeError(status, code);
-}
-
-// XMLHttpRequest for upload progress; fetch has none.
-function upload(url: string, form: FormData, csrf: string, onProgress: (pct: number) => void): Promise<{ status: number; data: { ok: boolean; error?: string; media?: MediaView } }> {
-  return new Promise((resolve) => {
-    const xhr = new XMLHttpRequest();
-    xhr.open("POST", url);
-    xhr.setRequestHeader("x-csrf-token", csrf);
-    xhr.upload.onprogress = (e) => {
-      if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
-    };
-    xhr.onload = () => {
-      let data: { ok: boolean; error?: string; media?: MediaView } = { ok: false, error: "bad_response" };
-      try {
-        data = JSON.parse(xhr.responseText);
-      } catch {}
-      resolve({ status: xhr.status, data });
-    };
-    xhr.onerror = () => resolve({ status: 0, data: { ok: false, error: "network" } });
-    xhr.send(form);
-  });
-}
 
 export function Uploader({ csrf, folder }: { csrf: string; folder: string }) {
   const router = useRouter();

@@ -652,7 +652,7 @@ textarea.adm-input { min-block-size: 120px; resize: vertical; }
 .adm-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 /* A button, even one sitting inside a sentence, is a tap target: 44px tall,
    inline-flex so the surrounding text still flows around it. */
-button.adm-link { background: none; border: 0; padding: 0 2px; font: inherit; font-weight: 600; color: var(--adm-primary-ink); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; display: inline-flex; align-items: center; min-block-size: 44px; vertical-align: middle; }
+button.adm-link { background: none; border: 0; padding: 0 2px; font: inherit; font-weight: 600; color: var(--adm-primary-ink); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; min-block-size: 44px; min-inline-size: 44px; vertical-align: middle; }
 .adm-media-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* Posts list: bulk selection */
@@ -765,3 +765,21 @@ button.adm-link { background: none; border: 0; padding: 0 2px; font: inherit; fo
 .adm-card-head { flex-wrap: wrap; }
 .adm-card-head > div:first-child { min-inline-size: 0; flex: 1 1 220px; }
 .adm-card-head .adm-actions { flex: 0 1 auto; min-inline-size: 0; }
+
+/* Markdown formatting toolbar (post editor). Glyph buttons on the shared 44px
+   icon button, so every tool is a real tap target. */
+.adm-md-toolbar { display: flex; flex-wrap: wrap; gap: 2px; padding: 4px; border: var(--adm-border-w) solid var(--adm-line); border-radius: 9px; background: var(--adm-surface-2); }
+.adm-md-tool { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 15px; font-weight: 700; color: var(--adm-ink); }
+.adm-md-tool-italic span { font-style: italic; font-weight: 600; }
+.adm-md-tool-quote span { font-size: 22px; line-height: 1; }
+.adm-md-tool-code span, .adm-md-tool-codeblock span { font-size: 12px; letter-spacing: -0.5px; }
+.adm-md-tool:disabled { opacity: .5; cursor: not-allowed; }
+
+/* Image picker: where the image comes from, and the upload panel. */
+.adm-picker-tabs { margin-block-end: 14px; border-block-end: var(--adm-border-w) solid var(--adm-line); }
+.adm-picker-tabs .adm-tab { display: inline-flex; align-items: center; gap: 8px; }
+.adm-picker-upload { display: grid; gap: 14px; }
+.adm-picker-chosen { display: grid; gap: 14px; grid-template-columns: minmax(0, 1fr); align-items: start; }
+@media (min-width: 640px) { .adm-picker-chosen { grid-template-columns: 200px minmax(0, 1fr); } }
+.adm-picker-preview { border: var(--adm-border-w) solid var(--adm-line); border-radius: var(--adm-radius); overflow: hidden; }
+.adm-picker-chosen-fields { display: grid; gap: 10px; min-inline-size: 0; }

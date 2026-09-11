@@ -15,6 +15,7 @@ import { Alert, Badge, Card } from "../ui/Basics";
 import { Button, ButtonLink } from "../ui/Button";
 import { Checkbox, Input, Select, Textarea } from "../ui/Field";
 import { Icon } from "../ui/Icon";
+import { MarkdownToolbar, useMarkdownFormatting } from "../ui/MarkdownToolbar";
 import { ConfirmDialog } from "../ui/Modal";
 import { Toggle } from "../ui/Toggle";
 import { useToast } from "../ui/Toast";
@@ -123,6 +124,16 @@ export function PostEditor({
   // Markdown preview through the server pipeline, only while the preview
   // tab is showing.
   const activeBody = locale === "en" ? value.bodyMd : value.translations[locale].bodyMd;
+  const writeBody = useCallback(
+    (next: string) => {
+      if (locale === "en") set("bodyMd", next);
+      else setValue((cur) => ({ ...cur, translations: { ...cur.translations, [locale]: { ...cur.translations[locale], bodyMd: next } } }));
+    },
+    [locale, set],
+  );
+  // Toolbar clicks, Ctrl+B / Ctrl+I / Ctrl+K in the textarea, and inserting
+  // an image all go through this, so the cursor ends up where it should.
+  const md = useMarkdownFormatting(bodyRef, activeBody, writeBody);
   useEffect(() => {
     if (bodyTab !== "preview") return;
     if (preview && preview.markdown === activeBody) return;
@@ -201,14 +212,8 @@ export function PostEditor({
   }
 
   function insertImage(m: MediaView) {
-    const snippet = `![${m.altText}](${m.url})`;
-    const ta = bodyRef.current;
-    const current = activeBody;
-    const start = ta?.selectionStart ?? current.length;
-    const end = ta?.selectionEnd ?? current.length;
-    const next = `${current.slice(0, start)}${start > 0 && !current.slice(0, start).endsWith("\n") ? "\n\n" : ""}${snippet}\n\n${current.slice(end)}`;
-    if (locale === "en") set("bodyMd", next);
-    else setTranslation(locale, "bodyMd", next);
+    // On its own paragraph at the cursor, with the cursor left after it.
+    md.insert(`![${m.altText}](${m.url})`);
   }
 
   function setTranslation(l: TranslationLocale, key: keyof TranslationDraft, v: string) {
@@ -315,12 +320,14 @@ export function PostEditor({
                   <button type="button" role="tab" aria-selected={bodyTab === "write"} className="adm-tab" onClick={() => setBodyTab("write")}>Write</button>
                   <button type="button" role="tab" aria-selected={bodyTab === "preview"} className="adm-tab" onClick={() => setBodyTab("preview")}>Preview</button>
                 </div>
-                <Button variant="ghost" size="sm" disabled={disabled} onClick={() => setPicker("body")}><Icon name="image" size={16} /> Insert image</Button>
               </div>
               {bodyTab === "write" ? (
+                <>
+                <MarkdownToolbar run={md.run} disabled={disabled} onInsertImage={() => setPicker("body")} />
                 <textarea
                   id="p-body"
                   ref={bodyRef}
+                  onKeyDown={md.onKeyDown}
                   className="adm-input adm-editor-body"
                   value={activeBody}
                   onChange={(e) => (locale === "en" ? set("bodyMd", e.target.value) : setTranslation(locale, "bodyMd", e.target.value))}
@@ -330,6 +337,7 @@ export function PostEditor({
                   dir={locale === "en" ? undefined : "auto"}
                   spellCheck
                 />
+                </>
               ) : (
                 <div className="adm-md-preview prose" aria-live="polite" aria-busy={preview?.markdown !== activeBody}>
                   {preview && preview.markdown === activeBody ? (

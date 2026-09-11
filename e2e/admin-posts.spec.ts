@@ -477,3 +477,78 @@ test("editor pages have no horizontal overflow at 360, 768 and 1280", async ({ b
   console.log(lines.join("\n"));
   await context.close();
 });
+
+// The editor's formatting toolbar and the picker's upload tab. Hero, sharing
+// image and insert image all open the same picker, so each is exercised
+// through the upload route, and the body gets formatted through the toolbar
+// and the keyboard.
+test("editor: format the body from the toolbar and the keyboard, and upload images from the computer for the hero, the sharing image and the body", async ({ browser, baseURL }) => {
+  test.setTimeout(120_000);
+  const { context, page } = await signedIn(browser, baseURL!);
+  await page.setViewportSize({ width: 1280, height: 1000 });
+  await page.goto("/admin/posts/new");
+  await page.getByLabel("Title", { exact: true }).fill(`E2E ${RUN} toolbar`);
+
+  // Toolbar: select the words and press Bold; then Ctrl+I on the selection
+  // the toolbar restored; then Heading on the line.
+  const body = page.locator("#p-body");
+  await body.fill("make this bold");
+  await body.press("Control+a");
+  await page.getByRole("button", { name: "Bold (Ctrl+B)" }).click();
+  await expect(body).toHaveValue("**make this bold**");
+  await body.press("Control+i");
+  await expect(body).toHaveValue("***make this bold***");
+  await page.getByRole("button", { name: "Heading" }).click();
+  await expect(body).toHaveValue("## ***make this bold***");
+  await page.getByRole("button", { name: "Bulleted list" }).click();
+  await expect(body).toHaveValue("- ## ***make this bold***");
+  await page.getByRole("button", { name: "Bulleted list" }).click();
+  await expect(body).toHaveValue("## ***make this bold***");
+  console.log("EDITOR: bold from the toolbar, italic from Ctrl+I, heading and list toggled on the same line");
+
+  const png = pngBytes();
+  const picker = page.locator("#media-picker");
+  async function uploadThroughPicker(name: string, alt: string) {
+    await picker.getByRole("tab", { name: "Upload from this computer" }).click();
+    await picker.getByLabel("Choose an image to upload").setInputFiles({ name, mimeType: "image/png", buffer: png });
+    await picker.getByLabel("Alt text (required)").fill(alt);
+    await picker.getByRole("button", { name: "Upload and use this image" }).click();
+    await expect(picker).toBeHidden();
+  }
+
+  // Body: insert image opens the picker; the upload lands at the cursor.
+  await body.press("End");
+  await page.getByRole("button", { name: "Insert image" }).click();
+  await uploadThroughPicker(`e2e-${RUN}-body.png`, "E2E body image");
+  await expect(body).toHaveValue(/## \*\*\*make this bold\*\*\*\n\n!\[E2E body image\]\(\/media\/[^)]+\)\n\n$/);
+
+  // Hero: the last "Choose image" button on the page belongs to the hero field.
+  await page.getByRole("button", { name: "Choose image" }).last().click();
+  await uploadThroughPicker(`e2e-${RUN}-hero.png`, "E2E hero image");
+  await expect(page.locator(".adm-image-field").last()).toContainText(`e2e-${RUN}-hero.png`);
+
+  // Sharing image: the first "Choose image" button belongs to it.
+  await page.getByRole("button", { name: "Choose image" }).first().click();
+  await uploadThroughPicker(`e2e-${RUN}-og.png`, "E2E sharing image");
+  await expect(page.locator(".adm-image-field").first()).toContainText(`e2e-${RUN}-og.png`);
+  console.log("EDITOR: body, hero and sharing image each uploaded from the computer through the picker");
+
+  // Every upload is a real media row with the alt text it was given.
+  for (const [name, alt] of [[`e2e-${RUN}-body.png`, "E2E body image"], [`e2e-${RUN}-hero.png`, "E2E hero image"], [`e2e-${RUN}-og.png`, "E2E sharing image"]]) {
+    const row = (await db().query<{ alt_text: string }>("select alt_text from media where filename = $1", [name])).rows[0];
+    expect(row?.alt_text, `${name} stored with its alt text`).toBe(alt);
+  }
+
+  // Saved together, the post references all three.
+  await page.getByRole("button", { name: "Create post" }).click();
+  await page.waitForURL(/\/admin\/posts\/[0-9a-f-]{36}$/);
+  const saved = (await db().query<{ body_md: string; hero: string | null; og: string | null }>(
+    `select p.body_md, h.filename as hero, o.filename as og from posts p left join media h on h.id = p.hero_image_id left join media o on o.id = p.og_image_id where p.slug = $1`,
+    [`e2e-${RUN}-toolbar`],
+  )).rows[0];
+  expect(saved.body_md).toContain("![E2E body image](/media/");
+  expect(saved.hero).toBe(`e2e-${RUN}-hero.png`);
+  expect(saved.og).toBe(`e2e-${RUN}-og.png`);
+  console.log("EDITOR: the saved post carries the formatted body, the uploaded hero and the uploaded sharing image");
+  await context.close();
+});
