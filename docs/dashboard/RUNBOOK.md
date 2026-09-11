@@ -357,3 +357,67 @@ the decisions list, is worth settling before you need the answer.
 
 **A deploy made the site worse.** Revert the commit and push. Content and
 translations live in the database, so a code revert does not lose them.
+
+---
+
+## 11. Day to day on your machine
+
+The one thing that keeps going wrong locally is the database being off when
+the site starts. The portable Postgres runs as an ordinary program attached
+to whichever terminal started it, so it stops with a reboot, with Ctrl+C in
+that terminal, or when that terminal window is closed. `npm run dev` now
+starts it first, every time, so the routine is short.
+
+**First time only.**
+
+```bash
+npm install
+cp .env.example .env.local      # then fill in DATABASE_URL and AUTH_SECRET at least
+npm run db:up                   # starts Postgres and proves it answers
+npm run db:migrate              # creates the tables
+npm run db:seed                 # optional, copies the file content into the database
+```
+
+**Every day.**
+
+```bash
+npm run dev
+```
+
+That runs `db:up` first (you will see `[ok] postgres started ...` or
+`[ok] postgres is already running ...`) and then the site. Then:
+
+- Public site: <http://localhost:3000>
+- Admin console: <http://localhost:3000/admin/login>, or the "Admin" link in
+  the footer of any page.
+
+Owner and Admin accounts need the second factor after the password, so have
+your authenticator app to hand.
+
+**If the console says "The database is not reachable right now".** Postgres
+has stopped since the site started, usually because the terminal that started
+it was closed. In any terminal, in the project folder:
+
+```bash
+npm run db:up
+```
+
+Reload the page. Nothing else needs restarting; the site reconnects on the
+next request.
+
+`db:up` also clears the one state that looks like "up" but is not: the
+server died mid-recovery and a leftover child process is still holding the
+port, so nothing answers and `pg_ctl stop` finds nothing to stop. It names
+the leftover processes, ends them, and starts the server properly.
+
+**Never think about it again.** Registering the server as a Windows service
+makes it start with the machine and ignore terminals entirely. Once, from a
+PowerShell window opened with "Run as administrator":
+
+```powershell
+D:\Work\Develmo\devtools\pgsql\bin\pg_ctl.exe register -N develmo-postgres -D D:\Work\Develmo\devtools\pgdata -o "-p 54329" -S auto
+net start develmo-postgres
+```
+
+After that `npm run db:up` simply reports that it is already running. To
+undo: `net stop develmo-postgres` and `pg_ctl.exe unregister -N develmo-postgres`.
