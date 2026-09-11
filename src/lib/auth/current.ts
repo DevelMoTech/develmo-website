@@ -2,14 +2,34 @@ import { cache } from "react";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getClientIp, hashIp } from "./ip";
+import { DatabaseUnavailableError, isDatabaseUnavailable } from "@/db/errors";
 import { CSRF_COOKIE, SESSION_COOKIE, loadSession, type SessionWithUser } from "./session";
 import { can, mfaRequired, type Permission } from "./rbac";
 
-// Session for the current request, deduplicated per render.
+// Session for the current request, deduplicated per render. An unreachable
+// database is reported as such rather than as a raw query failure, so a page
+// gate can tell an outage from a signed-out visitor.
 export const getCurrentSession = cache(async (): Promise<SessionWithUser | null> => {
   const c = await cookies();
-  return loadSession(c.get(SESSION_COOKIE)?.value);
+  try {
+    return await loadSession(c.get(SESSION_COOKIE)?.value);
+  } catch (err) {
+    if (isDatabaseUnavailable(err)) throw new DatabaseUnavailableError(err);
+    throw err;
+  }
 });
+
+// For pages that only use the session to be helpful, such as sending an
+// already signed-in visitor away from the sign-in form, or reading a theme
+// preference: during an outage they carry on as if nobody were signed in.
+export async function getCurrentSessionIfReachable(): Promise<SessionWithUser | null> {
+  try {
+    return await getCurrentSession();
+  } catch (err) {
+    if (err instanceof DatabaseUnavailableError) return null;
+    throw err;
+  }
+}
 
 // CSRF token to embed in forms. The proxy issues the cookie and mirrors it
 // into a request header so the very first render already has it.
@@ -43,7 +63,16 @@ export async function requirePageUser(
     allowMfaUnenrolled?: boolean;
   } = {},
 ): Promise<SessionWithUser> {
-  const auth = await getCurrentSession();
+  let auth: SessionWithUser | null;
+  try {
+    auth = await getCurrentSession();
+  } catch (err) {
+    // The session could not be checked, which is not the same as no session.
+    // The sign-in page says so, keeps the destination, and the cookie is
+    // left alone: once the database is back the next visit just works.
+    if (err instanceof DatabaseUnavailableError) redirect(`/admin/login?notice=database&next=${encodeURIComponent(path)}`);
+    throw err;
+  }
   if (!auth) loginRedirect(path);
   const { session, user } = auth;
   if (session.mfaPending && !opts.allowMfaPending) {

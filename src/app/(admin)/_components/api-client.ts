@@ -51,6 +51,11 @@ export function describeError(status: number, code: string | undefined, retryAft
       return "You do not have permission to do that.";
     case "invalid":
       return "Please check the highlighted fields.";
+    case "database_unavailable":
+      return "The database is not reachable right now. Try again in a moment.";
+    case "server_error":
+    case "bad_response":
+      return "Something went wrong on the server. Please try again, and tell an administrator if it keeps happening.";
     case "same":
       return "Choose a password you have not used here before.";
     case "confirm":

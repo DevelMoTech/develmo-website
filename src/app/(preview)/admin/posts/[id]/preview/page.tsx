@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { PostArticle, postPath } from "@/components/PostArticle";
-import { getCurrentSession } from "@/lib/auth/current";
+import { getCurrentSessionIfReachable } from "@/lib/auth/current";
 import { can } from "@/lib/auth/rbac";
 import { isLocale } from "@/lib/i18n";
 import { getPostByIdForPreview } from "@/lib/repo/posts";
@@ -23,7 +23,7 @@ export default async function PostPreviewPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ locale?: string }>;
 }) {
-  const auth = await getCurrentSession();
+  const auth = await getCurrentSessionIfReachable();
   if (!auth || auth.session.mfaPending || !can(auth.user.role, "content:read")) notFound();
   const { id } = await params;
   if (!UUID.test(id)) notFound();

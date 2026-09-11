@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { ZodType } from "zod";
+import { describeDbError, isDatabaseUnavailable } from "@/db/errors";
 import { CSRF_HEADER, csrfTokenMatches, originMatches } from "./csrf";
 import { getClientIp, hashIp } from "./ip";
 import { securityEvent } from "./log";
@@ -108,46 +109,64 @@ export function adminRoute<T>(
     }
 
     const sessionToken = cookies[SESSION_COOKIE] ?? null;
-    let auth: SessionWithUser | null = null;
-    if (opts.auth !== "none") {
-      auth = await loadSession(sessionToken);
-      if (!auth) return apiError(401, "unauthenticated");
-      if (auth.session.mfaPending && opts.auth !== "mfa-pending") return apiError(401, "mfa_required");
-      if (opts.permission && !can(auth.user.role, opts.permission)) {
-        await securityEvent({
-          type: "permission_denied",
-          userId: auth.user.id,
-          email: auth.user.email,
-          ipHash,
-          path,
-          userAgent,
-          meta: { permission: opts.permission },
-        });
-        return apiError(403, "forbidden");
+    try {
+      let auth: SessionWithUser | null = null;
+      if (opts.auth !== "none") {
+        auth = await loadSession(sessionToken);
+        if (!auth) return apiError(401, "unauthenticated");
+        if (auth.session.mfaPending && opts.auth !== "mfa-pending") return apiError(401, "mfa_required");
+        if (opts.permission && !can(auth.user.role, opts.permission)) {
+          await securityEvent({
+            type: "permission_denied",
+            userId: auth.user.id,
+            email: auth.user.email,
+            ipHash,
+            path,
+            userAgent,
+            meta: { permission: opts.permission },
+          });
+          return apiError(403, "forbidden");
+        }
       }
-    }
 
-    let body = bodyRaw as T;
-    if (opts.schema) {
-      const parsed = opts.schema.safeParse(bodyRaw);
-      if (!parsed.success) {
-        return apiError(400, "invalid", {
-          issues: parsed.error.issues.map((i) => ({ path: i.path.join("."), message: i.message })),
-        });
+      let body = bodyRaw as T;
+      if (opts.schema) {
+        const parsed = opts.schema.safeParse(bodyRaw);
+        if (!parsed.success) {
+          return apiError(400, "invalid", {
+            issues: parsed.error.issues.map((i) => ({ path: i.path.join("."), message: i.message })),
+          });
+        }
+        body = parsed.data;
       }
-      body = parsed.data;
-    }
 
-    return handler({
-      req,
-      body,
-      auth,
-      ip,
-      ipHash,
-      userAgent,
-      sessionToken,
-      baseUrl: requestBaseUrl(req.headers),
-    });
+      return await handler({
+        req,
+        body,
+        auth,
+        ip,
+        ipHash,
+        userAgent,
+        sessionToken,
+        baseUrl: requestBaseUrl(req.headers),
+      });
+    } catch (err) {
+      // An unreachable database is an outage, not a bug: say so with a
+      // status the client can act on, and keep the answer JSON like every
+      // other one from this wrapper. Without this the sign-in form got a
+      // bare 500 with no body and showed "Something went wrong".
+      if (isDatabaseUnavailable(err)) {
+        console.warn(`[api] ${path} answered 503, the database is not reachable: ${describeDbError(err)}`);
+        return NextResponse.json(
+          { ok: false, error: "database_unavailable", retryAfter: 10 },
+          { status: 503, headers: { "retry-after": "10" } },
+        );
+      }
+      // Anything else is a real failure and deserves the error log, but the
+      // client still gets a JSON body rather than an empty 500.
+      console.error(`[api] ${path} failed`, err);
+      return apiError(500, "server_error");
+    }
   };
 }
 

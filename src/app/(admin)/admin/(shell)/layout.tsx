@@ -5,7 +5,7 @@ import { UserMenu } from "@/app/(admin)/_components/shell/UserMenu";
 import { recentNotifications } from "@/app/(admin)/_lib/stats";
 import { visibleGroups } from "@/app/(admin)/_lib/nav";
 import { resolveTheme } from "@/app/(admin)/_lib/theme-server";
-import { getCsrfToken, getCurrentSession } from "@/lib/auth/current";
+import { getCsrfToken, getCurrentSessionIfReachable } from "@/lib/auth/current";
 import { can } from "@/lib/auth/rbac";
 import { unreadSubmissionCount } from "@/lib/submissions/digest";
 
@@ -13,7 +13,7 @@ import { unreadSubmissionCount } from "@/lib/submissions/digest";
 // usable session the children render bare and the page's own gate redirects
 // (keeping its ?next= behaviour), so this layout never redirects itself.
 export default async function ShellLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  const auth = await getCurrentSession();
+  const auth = await getCurrentSessionIfReachable();
   if (!auth || auth.session.mfaPending) return <>{children}</>;
   const { user } = auth;
   const [csrf, { theme }, notifications, unread] = await Promise.all([

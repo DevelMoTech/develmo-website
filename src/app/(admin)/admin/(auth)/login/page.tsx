@@ -3,7 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AuthCard } from "@/app/(admin)/_components/AuthCard";
 import { LoginForm } from "@/app/(admin)/_components/LoginForm";
-import { getCsrfToken, getCurrentSession } from "@/lib/auth/current";
+import { getCsrfToken, getCurrentSessionIfReachable } from "@/lib/auth/current";
 import { nextPathSchema } from "@/lib/schemas/auth";
 
 export const metadata: Metadata = { title: "Sign in" };
@@ -13,6 +13,7 @@ const NOTICES: Record<string, string> = {
   signed_out: "You have been signed out.",
   expired: "Your session has ended. Sign in again to continue.",
   email_changed: "Your email address has been updated. Sign in with the new address.",
+  database: "The database is not reachable right now, so your session could not be checked. Try again in a moment.",
 };
 
 export default async function LoginPage({
@@ -22,7 +23,7 @@ export default async function LoginPage({
 }) {
   const sp = await searchParams;
   const next = nextPathSchema.parse(sp.next ?? "/admin");
-  const auth = await getCurrentSession();
+  const auth = await getCurrentSessionIfReachable();
   if (auth && !auth.session.mfaPending) redirect(next);
   const csrf = await getCsrfToken();
   const notice = sp.notice ? NOTICES[sp.notice] : undefined;
