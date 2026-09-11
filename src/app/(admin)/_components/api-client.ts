@@ -39,7 +39,10 @@ export function describeError(status: number, code: string | undefined, retryAft
     case "invalid_credentials":
       return "Invalid email or password.";
     case "invalid_code":
-      return "That code was not accepted. Check the time on your device and try again.";
+      // The usual causes, in the order they happen: a stale entry in the
+      // authenticator from an earlier enrolment, a device clock set by hand,
+      // and a code read a moment too late.
+      return "That code was not accepted. Make sure you are reading the entry for this account and not an older one, that the time on your device is set automatically, then try the next code. A recovery code works here too.";
     case "invalid_current":
       return "Your current password was not accepted.";
     case "csrf":
