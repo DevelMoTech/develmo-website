@@ -10,6 +10,7 @@
     "og": "node scripts/generate-og.mjs",
     "test:e2e": "playwright test",
     "test:unit": "vitest run",
+    "db:up": "node scripts/db-up.mjs",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:seed": "node --env-file-if-exists=.env.local scripts/db-seed.mts",

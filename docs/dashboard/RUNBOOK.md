@@ -313,7 +313,7 @@ cache during a database outage is worth alerting on.
 
 Either way the cure is the same as above: make sure the database is
 reachable. Locally, the portable Postgres is usually stopped after a reboot;
-start it and reload.
+`npm run db:up` starts it and says whether it did; then reload.
 
 **Invitations and password resets are not arriving.** `RESEND_API_KEY` is
 unset or wrong. The server log prints
