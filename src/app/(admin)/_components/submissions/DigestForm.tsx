@@ -20,7 +20,7 @@ export function DigestForm({ csrf, initial }: { csrf: string; initial: string })
     setPending(true);
     const res = await apiPost("/api/admin/account/digest", { digest: next }, csrf);
     setPending(false);
-    if (res.data.ok) toast({ kind: "success", title: `Digest: ${LABELS[next]}`, body: next === "off" ? undefined : "Sent with Resend. Without RESEND_API_KEY the send is only logged." });
+    if (res.data.ok) toast({ kind: "success", title: `Digest: ${LABELS[next]}`, body: next === "off" ? undefined : "Sent through the configured email provider. Without one (SMTP or RESEND_API_KEY) the send is only logged." });
     else {
       setValue(previous);
       toast({ kind: "error", title: "Preference not saved", body: describeError(res.status, res.data.error) });

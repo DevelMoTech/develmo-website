@@ -7,8 +7,9 @@ import { qaAddress, type SubmissionRow } from "./delivery";
 
 // Per-user submission digests (brief §3.5): "instant" mails each new enquiry
 // as it lands, "daily" mails a summary once a day from the cron. Only users
-// whose role can read submissions are ever mailed. Without RESEND_API_KEY
-// the send is logged, not made, and nothing is marked as sent.
+// whose role can read submissions are ever mailed. Without an email provider
+// (SMTP or RESEND_API_KEY) the send is logged, not made, and nothing is
+// marked as sent.
 
 import type { DigestMode } from "@/lib/schemas/submission";
 

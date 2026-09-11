@@ -75,7 +75,8 @@ Strongly recommended before you invite anyone:
 
 | Variable | Why |
 |---|---|
-| `RESEND_API_KEY` | Invitations, password resets and email-change confirmations are sent through Resend. Without it the console still creates the invite, but nothing is delivered and the server log says so. |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` | A mailbox to send through, which is the quickest way to working email: the Gmail account with an app password (§10, "Emails are not being delivered", has the five steps). Carries enquiries, access-request notices, invitations, password resets and applicant emails. |
+| `RESEND_API_KEY` | Invitations, password resets and email-change confirmations go through Resend when this is set, otherwise through the SMTP mailbox. With neither, the console still creates the invite, but nothing is delivered and the server log says so. |
 | `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` | Durable rate limiting across serverless instances. Without them the limiter falls back to a database-backed window, which works but is slower and resets per deployment. |
 | `BLOB_READ_WRITE_TOKEN` | Vercel Blob, where uploaded media and applicant CVs live. Without it uploads are written to local disk, which is fine locally and wrong on Vercel. |
 | `CRON_SECRET` | Protects `/api/cron/*` and lets the proxy read the IP access rules. At least 16 characters. |
@@ -315,17 +316,42 @@ Either way the cure is the same as above: make sure the database is
 reachable. Locally, the portable Postgres is usually stopped after a reboot;
 `npm run db:up` starts it and says whether it did; then reload.
 
-**Invitations and password resets are not arriving.** `RESEND_API_KEY` is
-unset or wrong. The server log prints
-`[email] RESEND_API_KEY unset, not sent -> ...` for every message it did not
-send.
+**Invitations and password resets are not arriving.** No email provider is
+configured: neither `RESEND_API_KEY` nor the SMTP mailbox. The server log
+prints `[email] no provider configured ... not sent -> ...` for every message
+it did not send, and the dashboard health strip says "Not configured". The
+quickest fix is the Gmail mailbox, next.
 
 **Emails are not being delivered.** Open `/admin/settings/email` and press
 "Send a test". It sends a real message to the configured admin address and
 tells you exactly which channel carried it, or why every channel refused. The
-chain is Resend, then the webhook, then FormSubmit, the same road the contact
-form takes. What each one needs:
+chain is Resend, then SMTP, then the webhook, then FormSubmit, the same road
+the contact form takes. What each one needs:
 
+- **SMTP**, the quickest way to working email: a mailbox you own, sent
+  through with its username and a password. For the Gmail account
+  `s.shahzeb8874@gmail.com`:
+  1. Turn on 2-Step Verification for the Google account at
+     https://myaccount.google.com/security if it is not on already. Google
+     does not issue app passwords without it.
+  2. Open https://myaccount.google.com/apppasswords, type a name such as
+     `DevelMo site`, press Create, and copy the 16-letter password Google
+     shows once. (If that page says app passwords are not available, the
+     account is managed by an organisation or 2-Step Verification is off.)
+  3. Put it in `.env.local` as `SMTP_PASS=`. The other four lines are
+     already there: `SMTP_HOST=smtp.gmail.com`, `SMTP_PORT=587`,
+     `SMTP_USER=s.shahzeb8874@gmail.com` and `SMTP_FROM`. Spaces in the
+     pasted password do no harm.
+  4. Run `npm run email:test`. It logs in, sends one message to the inbox and
+     says exactly what went wrong otherwise. Then restart `npm run dev`; the
+     dashboard health strip now says "SMTP login accepted".
+  5. For the live site, add the same five variables in Vercel under the
+     project's Settings, Environment Variables, and redeploy.
+
+  Gmail sends as the account itself whatever `SMTP_FROM` says, and allows a
+  few hundred messages a day, which is plenty for enquiries, notices and
+  invitations. If the app password ever leaks, revoke it on the same Google
+  page and create another; nothing else changes.
 - **Resend**: `RESEND_API_KEY` set, and `CONTACT_FROM` on a domain you have
   verified in Resend. The default sender `onboarding@resend.dev` only delivers
   to the email address that owns the Resend account, which is fine for a test
@@ -339,10 +365,14 @@ form takes. What each one needs:
   activation for `s.shahzeb8874@gmail.com` was still pending when the site was
   handed over; the first real message triggers it.
 
-Invitations to new people go through Resend only, because FormSubmit can
-only reach addresses that have activated it. Until `RESEND_API_KEY` is set,
+Invitations to new people go through Resend or SMTP, never FormSubmit, which
+can only reach addresses that have activated it. Until one of those is set,
 approving a request still creates the invitation and shows you the link to
-pass on by hand.
+pass on by hand. Mail to the reserved test domains (`example.com`,
+`.invalid`, `.test`) is never sent by any channel, so the automated tests
+cannot fill the inbox with bounces; with the mailbox configured, the
+durability tests deliver a handful of real messages to it instead of
+recording a failure.
 
 **Locked out of the Owner account.** If you still have a recovery code, use it
 at the second factor prompt. If not, and no other Owner or Admin can help,

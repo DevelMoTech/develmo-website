@@ -1,15 +1,17 @@
 import { fromAddress } from "./email";
+import { sendViaSmtp, smtpConfig, smtpStatus, type SmtpStatus } from "./smtp";
 import { formSubmitUrl } from "./submissions/delivery";
 
 // Notices to the site's own people, an admin being told about a new access
 // request, or a test message from the settings page. These take the same road
 // the contact form takes to reach the inbox: Resend when a key is set, then
-// the webhook, then FormSubmit. The chain exists because Resend needs a key
-// and a verified sending domain, neither of which this code can provide, and
-// an admin not hearing about a request is worse than a request arriving by
-// an unglamorous route. Never throws; the outcome says what happened.
+// SMTP when a mailbox is configured, then the webhook, then FormSubmit. The
+// chain exists because Resend needs a key and a verified sending domain,
+// neither of which this code can provide, and an admin not hearing about a
+// request is worse than a request arriving by an unglamorous route. Never
+// throws; the outcome says what happened.
 
-export type NoticeChannel = "resend" | "webhook" | "formsubmit";
+export type NoticeChannel = "resend" | "smtp" | "webhook" | "formsubmit";
 export type NoticeOutcome = { status: "sent" | "failed"; channel: NoticeChannel | null; error: string | null };
 export type Notice = {
   to: string;
@@ -74,6 +76,15 @@ export async function deliverNotice(n: Notice): Promise<NoticeOutcome> {
       errors.push(`resend: ${describe(err)}`);
     }
   }
+  const smtp = smtpConfig();
+  if (smtp) {
+    try {
+      await sendViaSmtp({ to: n.to, subject: n.subject, text: n.text, replyTo: n.replyTo }, smtp);
+      return { status: "sent", channel: "smtp", error: errors.length ? errors.join("; ") : null };
+    } catch (err) {
+      errors.push(`smtp: ${describe(err)}`);
+    }
+  }
   const webhook = process.env.CONTACT_WEBHOOK_URL;
   if (webhook) {
     try {
@@ -96,6 +107,7 @@ export async function deliverNotice(n: Notice): Promise<NoticeOutcome> {
 // environment alone, with no secret values.
 export type EmailDeliveryStatus = {
   resend: { configured: boolean; from: string; fromIsShared: boolean };
+  smtp: SmtpStatus;
   webhook: { configured: boolean };
   formsubmit: { endpoint: string; overridden: boolean };
 };
@@ -104,6 +116,7 @@ export function emailDeliveryStatus(): EmailDeliveryStatus {
   const from = fromAddress();
   return {
     resend: { configured: !!process.env.RESEND_API_KEY, from, fromIsShared: /resend\.dev/i.test(from) },
+    smtp: smtpStatus(),
     webhook: { configured: !!process.env.CONTACT_WEBHOOK_URL },
     formsubmit: { endpoint: (process.env.FORMSUBMIT_URL || "https://formsubmit.co/ajax").replace(/\/$/, ""), overridden: !!process.env.FORMSUBMIT_URL },
   };

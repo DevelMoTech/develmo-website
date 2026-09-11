@@ -53,7 +53,7 @@ DevelMo is a UK-registered AI / computer-vision software company (offices UK, Au
 | Tests | **Playwright** e2e (`e2e/site.spec.ts`) |
 | Hosting | **Vercel** (auto-deploy on push to `main`) |
 | DNS | **Hostinger** (apex `A → 216.198.79.1`, `www CNAME → cname.vercel-dns.com`, `TXT _vercel` verification). Email MX/SPF/DKIM/DMARC untouched at Hostinger. |
-| Email delivery (form) | **FormSubmit** (no-account) → `s.shahzeb8874@gmail.com`; Resend/webhook are upgrade paths |
+| Email delivery (form) | Resend → **SMTP** (the Gmail mailbox with an app password, RUNBOOK §10) → webhook → **FormSubmit** (no-account), all to `s.shahzeb8874@gmail.com` |
 
 Dependencies are intentionally minimal (no UI kit, no CMS SDK yet, no auth lib yet).
 
@@ -163,7 +163,7 @@ Typed content in `src/lib/*.ts`. `Service`, `Industry`, and `Product` types carr
 ### 5.4 Security (current state)
 - **`next.config.ts` headers** on every route: `Content-Security-Policy`, `Strict-Transport-Security` (2y, preload), `X-Content-Type-Options`, `X-Frame-Options: SAMEORIGIN`, `Referrer-Policy`, `Permissions-Policy` (camera/mic/geo off), `X-DNS-Prefetch-Control`. `poweredByHeader: false`.
 - **CSP note:** currently allows `'unsafe-inline'` + `'unsafe-eval'` on `script-src` (needed for Next runtime + inline JSON-LD/theme script). Tightening to a **nonce-based CSP** is a known follow-up (§9.2).
-- **Contact API (`src/app/api/contact/route.ts`):** zod validation, **honeypot** (`company_url`), **in-memory rate limit** (5/min/IP — per warm instance only), **optional Google reCAPTCHA v3** (invisible, score-based; active when `RECAPTCHA_SECRET_KEY` + `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` are set — see `src/lib/recaptcha.ts`). Delivery chain: Resend (if `RESEND_API_KEY`) → webhook (if `CONTACT_WEBHOOK_URL`) → **FormSubmit** default. QA submissions to `@example.*` are skipped.
+- **Contact API (`src/app/api/contact/route.ts`):** zod validation, **honeypot** (`company_url`), **in-memory rate limit** (5/min/IP — per warm instance only), **optional Google reCAPTCHA v3** (invisible, score-based; active when `RECAPTCHA_SECRET_KEY` + `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` are set — see `src/lib/recaptcha.ts`). Delivery chain: Resend (if `RESEND_API_KEY`) → SMTP (if `SMTP_HOST`, `SMTP_USER` and `SMTP_PASS`) → webhook (if `CONTACT_WEBHOOK_URL`) → **FormSubmit** default. QA submissions to `@example.*` are skipped.
 - **Static-asset caching** (added this session): `Cache-Control: public, max-age=31536000, immutable` for `/public` media via `source: "/(.*)\\.(jpg|jpeg|png|gif|webp|avif|svg|ico|mp4|webm|woff|woff2)"`. HTML stays dynamic/no-store.
 - **No authentication** anywhere (see §9.3).
 
@@ -220,7 +220,7 @@ This session continued a long build. In chronological arc:
 - **Blog article bodies + post titles/excerpts stay English** (content, not chrome). Only blog *chrome* is localised.
 - **Metadata (`<title>`/descriptions) stay English** (static, crawler-facing).
 - **Native ar/ur review recommended** — translations are machine-generated + AI-critic-reviewed, not human-verified.
-- **FormSubmit activation pending** — the **first real** contact submission triggers a one-time activation email to `s.shahzeb8874@gmail.com`; someone must click it once to enable delivery. (Or set `RESEND_API_KEY` for production email.)
+- **FormSubmit activation pending** — the **first real** contact submission triggers a one-time activation email to `s.shahzeb8874@gmail.com`; someone must click it once to enable delivery. (Or set the SMTP variables, or `RESEND_API_KEY`, for production email; RUNBOOK §10 has the Gmail steps.)
 - **Sanity CMS not yet connected** — content is Sanity-shaped but still lives in `src/lib` (§9.4). This was the original core goal (remove the developer bottleneck).
 - **Rate limit is in-memory** (per serverless instance) — not robust across instances (§9.2).
 - **Vercel/GitHub 2FA** not set up (recommended).
@@ -246,7 +246,7 @@ Build on the solid header baseline. Prioritised:
 2. **Durable rate limiting** — replace the in-memory limiter in `api/contact/route.ts` with **Upstash Redis** (or Vercel KV) so limits hold across serverless instances. Consider Vercel WAF / firewall rules.
 3. **reCAPTCHA v3 is configured** — a Score-based (v3) key is registered in the Google admin console under the `Develmo` GCP project (label `develmo.com`, site id `765673591`, domains `develmo.com` / `www.develmo.com` / `localhost`). Keys live in **`.env.local` locally only** — `.env*` is gitignored, so **`NEXT_PUBLIC_RECAPTCHA_SITE_KEY` and `RECAPTCHA_SECRET_KEY` must be added to the Vercel project's environment variables** or the check silently stays off in production (the code no-ops without a secret). Verified: the full e2e suite passes with the keys live, so an automated Chrome scores above the 0.5 cut-off — the contact-submit test does not need a keyless server.
 4. **Dependency hygiene** — enable Dependabot / run `npm audit`; keep Next patched (security releases are frequent).
-5. **Secrets** — only in Vercel env; never commit. Rotate the FormSubmit target to a proper Resend domain for production email.
+5. **Secrets** — only in Vercel env; never commit. Production email is the Gmail SMTP mailbox (or a verified Resend domain); FormSubmit is only the fallback.
 6. **Accounts** — enable 2FA on Vercel + GitHub.
 7. **Headers polish** — consider `Cross-Origin-Opener-Policy`, `Cross-Origin-Resource-Policy` where safe.
 - **Definition of done:** A/A+ on securityheaders.com and Observatory without breaking the app (test the theme toggle + JSON-LD + form after CSP changes).
@@ -379,13 +379,13 @@ on the navigation editor accepts `/admin/login` but no other `/admin` path.
 Every new request emails the address in `/admin/settings/email`, which
 defaults to `CONTACT_TO` and then to `s.shahzeb8874@gmail.com`, the inbox the
 contact form already uses. The message takes the contact form's road, Resend,
-then the webhook, then FormSubmit (`src/lib/notify.ts`), and the outcome is
+then SMTP, then the webhook, then FormSubmit (`src/lib/notify.ts`), and the outcome is
 written to the request row and shown in the queue as "Admin told", with a
 button to send it again. The same page sends a real test message and reports
 which channel carried it or why each one refused, because deliverability here
-depends on things only the owner holds: a Resend key, a verified sending
-domain, and the FormSubmit activation click. Invitations themselves go
-through Resend only.
+depends on things only the owner holds: a Gmail app password for SMTP, or a
+Resend key with a verified sending domain, or the FormSubmit activation
+click. Invitations themselves go through Resend or SMTP only.
 
 ### 11.5 Data model
 
@@ -520,7 +520,8 @@ contributor.
 ## Appendix A — Environment variables (set in Vercel, never commit)
 | Var | Purpose | Required? |
 |---|---|---|
-| `RESEND_API_KEY` | Production email delivery for the contact form | Optional (upgrade from FormSubmit) |
+| `RESEND_API_KEY` | Email delivery through Resend, tried before SMTP | Optional |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` | Send through a mailbox (the Gmail account with an app password): enquiries, notices, invitations, resets, applicant emails. HOST, USER and PASS are all needed; PORT defaults to 587 | Recommended (the quickest working email) |
 | `CONTACT_TO` | Recipient (default `s.shahzeb8874@gmail.com`) | Optional |
 | `CONTACT_FROM` | From address for Resend | Optional |
 | `CONTACT_WEBHOOK_URL` | Alternative delivery to a webhook | Optional |
@@ -554,7 +555,7 @@ The complete list, with a comment on each, is `.env.example` at the repo root.
 - **GitHub:** private repo owned by DevelMo (push to `main` = deploy).
 - **Vercel:** DevelMo project (Hobby). Opted out of AI training.
 - **DNS:** Hostinger (apex `A → 216.198.79.1`, `www CNAME → cname.vercel-dns.com`, `TXT _vercel`). **Email records (MX/SPF/DKIM/DMARC) must stay untouched.** Domain expires **2027-01-21**, auto-renew OFF.
-- **Form email:** currently `s.shahzeb8874@gmail.com` via FormSubmit (activation click pending).
+- **Form email:** `s.shahzeb8874@gmail.com`, through its own Gmail SMTP once `SMTP_PASS` (a Google app password) is set in Vercel; FormSubmit (activation click pending) is the fallback.
 
 ## Appendix C — The i18n cheat-sheet (most common task)
 ```

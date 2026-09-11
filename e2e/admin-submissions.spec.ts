@@ -65,6 +65,12 @@ function contactPayload(overrides: Record<string, unknown> = {}) {
   };
 }
 
+// With a mailbox in .env.local (SMTP_HOST, SMTP_USER and SMTP_PASS all set)
+// the delivery chain succeeds through SMTP and a real message lands in the
+// owner's inbox, so the durability checks below prove delivery and its record
+// instead of failure and its record. The visitor sees success either way.
+const smtpLive = !!(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
+
 type Row = { id: string; status: string; is_spam: boolean; spam_reason: string | null; tags: string[]; service: string; intent: string; industry: string; product: string; landing_page: string; referrer: string; utm: Record<string, string> | null; locale: string; delivery_status: string; delivery_error: string | null; delivery_channel: string | null; delivery_attempts: number; message: string; ip_hash: string | null; user_agent: string | null };
 async function rowFor(email: string): Promise<Row | undefined> {
   return (await db().query<Row>(`select id, status, is_spam, spam_reason, tags, service, intent, industry, product, landing_page, referrer, utm, locale, delivery_status, delivery_error, delivery_channel, delivery_attempts, message, ip_hash, user_agent from submissions where email = $1 order by created_at desc limit 1`, [email])).rows[0];
@@ -123,7 +129,7 @@ test("the public contact form stores the enquiry with the ?service, ?intent and 
   expect((await rowFor(email))!.delivery_error).toContain("QA address");
 });
 
-test("DURABILITY: with Resend unset, the webhook and FormSubmit unreachable, the enquiry is stored, the visitor sees success, and the failure is recorded", async ({ browser, baseURL, request }) => {
+test("DURABILITY: with Resend unset, the webhook and FormSubmit unreachable, the enquiry is stored, the visitor sees success, and the outcome is recorded", async ({ browser, baseURL, request }) => {
   test.setTimeout(120_000);
   // Preconditions: the test server must be running with these in its environment.
   expect(process.env.RESEND_API_KEY ?? "", "RESEND_API_KEY must be unset").toBe("");
@@ -141,20 +147,26 @@ test("DURABILITY: with Resend unset, the webhook and FormSubmit unreachable, the
   const stored = await rowFor(payload.email);
   expect(stored).toBeTruthy();
   expect(stored!.status).toBe("new");
-  // ...and the chain, running after the response, records its failure on the row.
-  await expect.poll(async () => (await rowFor(payload.email))!.delivery_status, { timeout: 30_000 }).toBe("failed");
+  // ...and the chain, running after the response, records its outcome on the
+  // row: a failure with every channel named, or delivery through the mailbox.
+  await expect.poll(async () => (await rowFor(payload.email))!.delivery_status, { timeout: 30_000 }).toBe(smtpLive ? "sent" : "failed");
   const row = (await rowFor(payload.email))!;
   expect(row.delivery_attempts).toBe(1);
-  expect(row.delivery_channel).toBeNull();
-  expect(row.delivery_error).toMatch(/^webhook: .+; formsubmit: .+$/);
-  expect(row.delivery_error).not.toContain("resend");
+  if (smtpLive) {
+    expect(row.delivery_channel).toBe("smtp");
+    expect(row.delivery_error).toBeNull();
+  } else {
+    expect(row.delivery_channel).toBeNull();
+    expect(row.delivery_error).toMatch(/^webhook: .+; formsubmit: .+$/);
+    expect(row.delivery_error).not.toContain("resend");
+  }
   console.log(`DURABILITY EVIDENCE: response=${JSON.stringify(body)} status=${row.status} delivery_status=${row.delivery_status} attempts=${row.delivery_attempts} error="${row.delivery_error}"`);
 
-  // Replay from the console fails the same way and bumps the attempt count.
+  // Replay from the console ends the same way and bumps the attempt count.
   const { context, csrf, request: admin } = await signedIn(browser, baseURL!);
   const replay = await post(admin, baseURL!, csrf, "/api/admin/submissions/replay", { id: row.id });
   expect(replay.status()).toBe(200);
-  expect((await replay.json()).delivery.status).toBe("failed");
+  expect((await replay.json()).delivery.status).toBe(smtpLive ? "sent" : "failed");
   expect((await rowFor(payload.email))!.delivery_attempts).toBe(2);
   const audited = await db().query<{ action: string }>(`select action from audit_log where entity_type = 'submission' and entity_id = $1 and action = 'submission.replay'`, [row.id]);
   expect(audited.rowCount).toBe(1);
@@ -184,8 +196,9 @@ test("a honeypot submission lands in the spam view instead of vanishing, and Not
   await expect.poll(async () => (await rowFor(email))!.is_spam).toBe(false);
   const restored = (await rowFor(email))!;
   expect(restored.status).toBe("new");
-  // A restored enquiry is delivered now; here every channel is unreachable, so it fails honestly.
-  expect(restored.delivery_status).toBe("failed");
+  // A restored enquiry is delivered now: through the mailbox when one is
+  // configured, otherwise every channel is unreachable and it fails honestly.
+  expect(restored.delivery_status).toBe(smtpLive ? "sent" : "failed");
   await page.goto("/admin/submissions");
   await expect(page.locator("tr", { hasText: email })).toBeVisible();
   await context.close();
@@ -212,8 +225,8 @@ test("triage: read on open, status, assignment, tags, threaded notes, mailto rep
   const mailto = await page.getByRole("link", { name: "Reply by email" }).getAttribute("href");
   expect(mailto).toContain(`mailto:${encodeURIComponent(email)}`);
   expect(decodeURIComponent(mailto!)).toContain("Hi Durable,");
-  await expect(page.locator(".adm-badge", { hasText: "failed" }).first()).toBeVisible();
-  await expect(page.getByText(/^webhook: /)).toBeVisible();
+  await expect(page.locator(".adm-badge", { hasText: smtpLive ? "sent" : "failed" }).first()).toBeVisible();
+  if (!smtpLive) await expect(page.getByText(/^webhook: /)).toBeVisible();
 
   // Status, assignment, tags.
   await page.getByLabel("Status", { exact: true }).selectOption("qualified");
@@ -275,8 +288,8 @@ test("job applications cross-link into the inbox; digests and retention run from
     if (linked) expect(linked.kind).toBe("application");
   }
 
-  // Daily digest: a user on "daily" is due; the cron attempts it (no
-  // RESEND_API_KEY here, so attempted but not marked sent).
+  // Daily digest: a user on "daily" is due; the cron attempts it (the staff
+  // address is a reserved test address, so attempted but never sent).
   await post(admin, baseURL!, csrf, "/api/admin/account/digest", { digest: "daily" });
   expect((await db().query<{ digest: string }>(`select digest from users where email = $1`, [staffEmail])).rows[0].digest).toBe("daily");
   const cron = await request.get(`${baseURL}/api/cron/publish`, { headers: { authorization: `Bearer ${process.env.CRON_SECRET}` } });

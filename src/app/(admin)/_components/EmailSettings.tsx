@@ -30,7 +30,7 @@ export function EmailSettings({ csrf, notifyEmail, status, canWrite }: { csrf: s
     if (res?.data.ok) setResult({ to: res.data.to, outcome: res.data.outcome });
   }
 
-  const anyChannel = status.resend.configured || status.webhook.configured || !status.formsubmit.overridden;
+  const anyChannel = status.resend.configured || status.smtp.configured || status.webhook.configured || !status.formsubmit.overridden;
 
   return (
     <div className="adm-grid" style={{ marginBlockStart: 18 }}>
@@ -42,6 +42,27 @@ export function EmailSettings({ csrf, notifyEmail, status, canWrite }: { csrf: s
             <div className="adm-help">
               From <code>{status.resend.from}</code>.
               {status.resend.fromIsShared && " That is Resend's shared onboarding address, which only delivers to the Resend account owner. Production needs CONTACT_FROM on a domain verified in Resend."}
+            </div>
+          </dd>
+          <dt>SMTP</dt>
+          <dd>
+            <Badge tone={status.smtp.configured ? "ok" : status.smtp.missing.length < 3 ? "warn" : "muted"}>
+              {status.smtp.configured ? "configured" : status.smtp.missing.length < 3 ? "incomplete" : "not set"}
+            </Badge>
+            <div className="adm-help">
+              {status.smtp.configured ? (
+                <>
+                  Through <code>{status.smtp.host}:{status.smtp.port}</code> as <code>{status.smtp.user}</code>, from <code>{status.smtp.from}</code>.
+                  {status.smtp.gmail && " Gmail sends as the account itself and reaches any address, so this also carries invitations and applicant emails."}
+                </>
+              ) : status.smtp.missing.length < 3 ? (
+                <>
+                  Still needed: <code>{status.smtp.missing.join(", ")}</code>.
+                  {status.smtp.gmail && " For Gmail, SMTP_PASS is a 16-letter app password from myaccount.google.com/apppasswords, which needs 2-Step Verification on the account. The runbook has the steps."}
+                </>
+              ) : (
+                "SMTP_HOST, SMTP_USER and SMTP_PASS. A Gmail account with an app password works, as does any mailbox provider. The runbook has the steps."
+              )}
             </div>
           </dd>
           <dt>Webhook</dt>

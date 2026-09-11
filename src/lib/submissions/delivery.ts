@@ -1,11 +1,13 @@
 import { eq } from "drizzle-orm";
 import { getDb } from "@/db";
 import { submissions } from "@/db/schema";
+import { sendViaSmtp, smtpConfig, type SmtpConfig } from "@/lib/smtp";
 
 // The contact form's delivery chain (brief §3.5), now fed from a stored row.
 // Channels are tried in order and the first success wins: Resend when
-// RESEND_API_KEY is set, the webhook when CONTACT_WEBHOOK_URL is set, then
-// FormSubmit. A channel that is not configured is skipped; one that fails
+// RESEND_API_KEY is set, SMTP when SMTP_HOST, SMTP_USER and SMTP_PASS are
+// set, the webhook when CONTACT_WEBHOOK_URL is set, then FormSubmit. A
+// channel that is not configured is skipped; one that fails
 // is recorded and the next is tried. The outcome is written back to the row,
 // so a delivery failure marks the enquiry, it never loses it.
 
@@ -77,6 +79,13 @@ async function tryResend(row: SubmissionRow, key: string): Promise<void> {
   if (!res.ok) throw new Error(`Resend error ${res.status}`);
 }
 
+// The same subject and text Resend sends, from the configured mailbox, with
+// the visitor as reply-to so an answer from the inbox goes straight to them.
+async function trySmtp(row: SubmissionRow, cfg: SmtpConfig): Promise<void> {
+  const { subject, text } = deliveryText(row);
+  await sendViaSmtp({ to: recipient(), subject, text, replyTo: row.email }, cfg);
+}
+
 // The webhook keeps its pre-rewrite payload shape: the validated form
 // fields (firstName, lastName, email, phone, company, budget, service,
 // message with the [Context] line, consent) plus a subject. The stored row
@@ -138,6 +147,15 @@ export async function runDeliveryChain(row: SubmissionRow): Promise<DeliveryOutc
       return { status: "sent", channel: "resend", error: null };
     } catch (err) {
       errors.push(`resend: ${describe(err)}`);
+    }
+  }
+  const smtp = smtpConfig();
+  if (smtp) {
+    try {
+      await trySmtp(row, smtp);
+      return { status: "sent", channel: "smtp", error: errors.length ? errors.join("; ") : null };
+    } catch (err) {
+      errors.push(`smtp: ${describe(err)}`);
     }
   }
   const webhook = process.env.CONTACT_WEBHOOK_URL;

@@ -128,7 +128,7 @@ export async function sendAcknowledgement(app: ApplicationRow, job: JobRow): Pro
   const result = await sendEmail({ to: app.email, subject: renderTemplate(tpl.subject, vars), text: renderTemplate(tpl.body, vars) });
   await getDb()
     .update(applications)
-    .set(result.sent ? { ackSentAt: new Date(), ackError: null } : { ackError: result.error ?? (result.skipped ? "RESEND_API_KEY not configured" : "not sent") })
+    .set(result.sent ? { ackSentAt: new Date(), ackError: null } : { ackError: result.error ?? (result.skipped ? "no email provider configured (SMTP or RESEND_API_KEY)" : "not sent") })
     .where(eq(applications.id, app.id));
 }
 
@@ -207,7 +207,7 @@ export async function sendRejection(id: string, subject: string, body: string, a
   }
   await changeStage(id, "rejected", result.sent ? "Rejection email sent" : `Rejection recorded, email not sent (${result.error ?? result.skipped ?? "unknown"})`, actor);
   await audit({ actorId: actor.user.id, actorEmail: actor.user.email, action: "application.reject_email", entityType: "application", entityId: id, after: { sent: result.sent, error: result.error ?? result.skipped ?? null }, ipHash: actor.ipHash });
-  return { ok: true, sent: result.sent, error: result.error ?? (result.skipped ? "RESEND_API_KEY not configured" : undefined) };
+  return { ok: true, sent: result.sent, error: result.error ?? (result.skipped ? "no email provider configured (SMTP or RESEND_API_KEY)" : undefined) };
 }
 
 export async function cvDownloadUrl(id: string): Promise<{ url: string; filename: string } | null> {

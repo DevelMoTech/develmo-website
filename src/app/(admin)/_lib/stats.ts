@@ -1,5 +1,6 @@
 import { and, count, desc, eq, gte, isNull, or, sql } from "drizzle-orm";
 import { getDb } from "@/db";
+import { smtpConfig, verifySmtp } from "@/lib/smtp";
 import {
   applications,
   auditLog,
@@ -122,7 +123,7 @@ export async function securityStats() {
 let emailProbe: { at: number; ok: boolean | null; detail: string } | null = null;
 
 // Health strip (brief §3.2). The email probe is cached per instance for five
-// minutes so the dashboard never hammers Resend.
+// minutes so the dashboard never hammers Resend or the mailbox.
 export async function healthStats() {
   const db = getDb();
   let dbOk = false;
@@ -137,14 +138,26 @@ export async function healthStats() {
   }
 
   const key = process.env.RESEND_API_KEY;
-  if (!key) {
-    emailProbe = { at: Date.now(), ok: null, detail: "Not configured (RESEND_API_KEY unset)" };
+  const smtp = smtpConfig();
+  if (!key && !smtp) {
+    emailProbe = { at: Date.now(), ok: null, detail: "Not configured (no RESEND_API_KEY, and SMTP_HOST, SMTP_USER and SMTP_PASS not all set)" };
   } else if (!emailProbe || Date.now() - emailProbe.at > 5 * 60 * 1000) {
-    try {
-      const res = await fetch("https://api.resend.com/domains", { headers: { authorization: `Bearer ${key}` }, signal: AbortSignal.timeout(3000) });
-      emailProbe = { at: Date.now(), ok: res.ok, detail: res.ok ? "Resend reachable" : `Resend answered ${res.status}` };
-    } catch {
-      emailProbe = { at: Date.now(), ok: false, detail: "Resend unreachable" };
+    if (key) {
+      try {
+        const res = await fetch("https://api.resend.com/domains", { headers: { authorization: `Bearer ${key}` }, signal: AbortSignal.timeout(3000) });
+        emailProbe = { at: Date.now(), ok: res.ok, detail: res.ok ? "Resend reachable" : `Resend answered ${res.status}` };
+      } catch {
+        emailProbe = { at: Date.now(), ok: false, detail: "Resend unreachable" };
+      }
+    } else if (smtp) {
+      // A real login to the mailbox, nothing sent, cached like the Resend probe.
+      try {
+        await verifySmtp(smtp);
+        emailProbe = { at: Date.now(), ok: true, detail: `SMTP login accepted by ${smtp.host}` };
+      } catch (err) {
+        // The first sentence of the delivery message: what failed, not the remedy.
+        emailProbe = { at: Date.now(), ok: false, detail: (err instanceof Error ? err.message : String(err)).split(". ")[0] };
+      }
     }
   }
 

@@ -3,6 +3,9 @@ import { deliveryText, formSubmitUrl, qaAddress, runDeliveryChain, type Submissi
 import { renderReply, mailtoFor } from "@/lib/submissions/reply";
 import { DEFAULT_REPLY_TEMPLATE } from "@/lib/admin/settings";
 
+const smtpMock = vi.hoisted(() => ({ sendMail: vi.fn<(message: Record<string, unknown>) => Promise<unknown>>() }));
+vi.mock("nodemailer", () => ({ createTransport: () => ({ sendMail: smtpMock.sendMail, close: () => {} }) }));
+
 const row: SubmissionRow = {
   id: "11111111-1111-4111-8111-111111111111",
   kind: "contact",
@@ -44,7 +47,7 @@ const row: SubmissionRow = {
   updatedAt: new Date("2026-09-01T00:00:00Z"),
 };
 
-const ENV = ["RESEND_API_KEY", "CONTACT_WEBHOOK_URL", "FORMSUBMIT_URL", "CONTACT_TO"] as const;
+const ENV = ["RESEND_API_KEY", "CONTACT_WEBHOOK_URL", "FORMSUBMIT_URL", "CONTACT_TO", "SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASS", "SMTP_FROM", "SMTP_SECURE"] as const;
 const saved: Record<string, string | undefined> = {};
 
 beforeEach(() => {
@@ -52,6 +55,8 @@ beforeEach(() => {
     saved[k] = process.env[k];
     delete process.env[k];
   }
+  smtpMock.sendMail.mockReset();
+  smtpMock.sendMail.mockResolvedValue({});
 });
 afterEach(() => {
   for (const k of ENV) {
@@ -98,6 +103,20 @@ describe("runDeliveryChain", () => {
     const calls = mockFetch(() => new Response("{}", { status: 200 }));
     expect(await runDeliveryChain(row)).toEqual({ status: "sent", channel: "resend", error: null });
     expect(calls).toEqual(["https://api.resend.com/emails"]);
+  });
+
+  it("uses SMTP after Resend and before the webhook, with the visitor as reply-to", async () => {
+    process.env.SMTP_HOST = "smtp.gmail.com";
+    process.env.SMTP_USER = "owner@gmail.com";
+    process.env.SMTP_PASS = "abcdefghijklmnop";
+    process.env.CONTACT_WEBHOOK_URL = "https://hooks.example.test/contact";
+    const calls = mockFetch(() => new Response("{}", { status: 200 }));
+    expect(await runDeliveryChain(row)).toEqual({ status: "sent", channel: "smtp", error: null });
+    expect(calls).toEqual([]);
+    expect(smtpMock.sendMail).toHaveBeenCalledTimes(1);
+    const sent = smtpMock.sendMail.mock.calls[0][0];
+    expect(sent).toMatchObject({ from: "DevelMo <owner@gmail.com>", to: "s.shahzeb8874@gmail.com", replyTo: "ada@lovelace.test", subject: "New enquiry from Ada Lovelace" });
+    expect(String(sent.text)).toContain("[Context] service=CrowdIQ, industry=retail, intent=demo");
   });
 
   it("falls through Resend -> webhook -> FormSubmit and keeps every error when all fail", async () => {

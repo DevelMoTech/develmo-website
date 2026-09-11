@@ -159,8 +159,8 @@ test("the public application form submits with a CV; the row, trail and signed C
   expect(row.cv_filename).toBe("grace-cv.pdf");
   expect(row.consent_at).toBeTruthy();
   expect(row.locale).toBe("en");
-  // Acknowledgement was attempted after the response; without RESEND_API_KEY it is recorded as not sent.
-  await expect.poll(async () => (await db().query<{ ack_error: string | null }>(`select ack_error from applications where id = $1`, [row.id])).rows[0].ack_error).toContain("RESEND_API_KEY");
+  // Acknowledgement was attempted after the response; an example.com applicant is a reserved test address, so it is recorded as not sent.
+  await expect.poll(async () => (await db().query<{ ack_error: string | null }>(`select ack_error from applications where id = $1`, [row.id])).rows[0].ack_error).toContain("reserved test address");
   const events = await db().query<{ to_stage: string; note: string }>(`select to_stage, note from application_events where application_id = $1`, [row.id]);
   expect(events.rows).toEqual([{ to_stage: "new", note: "Submitted through the careers page" }]);
 
@@ -259,7 +259,7 @@ test("pipeline: stage changes with a trail, rating, assignment, notes, rejection
   await expect(page.getByText("Moved to Interview")).toBeVisible();
   await expect(page.getByText("screening to interview: Panel on Thursday")).toBeVisible({ timeout: 15_000 });
 
-  // Rejection from the editable template (no RESEND_API_KEY locally: recorded, not sent).
+  // Rejection from the editable template (the applicant is a reserved test address: recorded, not sent).
   await page.getByRole("button", { name: "Send rejection" }).click();
   const dialog = page.locator("#reject-application");
   await expect(dialog.getByLabel("Subject")).toHaveValue(/Your application for/);
