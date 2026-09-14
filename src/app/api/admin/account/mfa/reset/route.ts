@@ -1,6 +1,6 @@
 import { adminRoute, apiError, apiOk } from "@/lib/auth/api";
 import { resetOwnMfa } from "@/lib/auth/flows";
-import { mfaRequired } from "@/lib/auth/rbac";
+import { getMfaPolicy, mustEnrol } from "@/lib/auth/policy";
 import { z } from "zod";
 
 export const runtime = "nodejs";
@@ -13,5 +13,5 @@ export const POST = adminRoute({ auth: "required", schema }, async ({ auth, body
   if (!auth) return apiError(401, "unauthenticated");
   const result = await resetOwnMfa(auth, body.currentPassword, { ipHash, userAgent });
   if (!result.ok) return apiError(400, "invalid_current");
-  return apiOk({ redirectTo: mfaRequired(auth.user.role) ? "/admin/mfa/enrol" : null });
+  return apiOk({ redirectTo: mustEnrol(await getMfaPolicy(), { role: auth.user.role, totpEnabled: false }) ? "/admin/mfa/enrol" : null });
 });

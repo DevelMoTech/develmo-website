@@ -57,6 +57,10 @@ export default async function SecurityPage() {
           <dd>The route handlers, through a durable counter. Limits are read from the database with a 30 second cache, so a change takes effect without a restart.</dd>
           <dt>Response headers</dt>
           <dd>Deployed with the code in next.config.ts. The <Link className="adm-link" href="/admin/security/headers">headers panel</Link> reads them back and grades them; it never changes them.</dd>
+          <dt>Second factor</dt>
+          <dd>
+            The sign-in flow, by the policy under <Link className="adm-link" href="/admin/security/authentication">Authentication</Link>: off, optional (the default), required for Owner and Admin, or required for everyone. A change applies to the next sign in at once.
+          </dd>
           <dt>Roles</dt>
           <dd>Every page and endpoint in this module requires security:write, which only Owner and Admin hold. Editor and Viewer are refused server side.</dd>
         </dl>

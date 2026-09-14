@@ -4,6 +4,7 @@ import { describeDbError, isDatabaseUnavailable } from "@/db/errors";
 import { CSRF_HEADER, csrfTokenMatches, originMatches } from "./csrf";
 import { getClientIp, hashIp } from "./ip";
 import { securityEvent } from "./log";
+import { getMfaPolicy, stillPending } from "./policy";
 import { can, type Permission } from "./rbac";
 import { CSRF_COOKIE, SESSION_COOKIE, loadSession, type SessionWithUser } from "./session";
 
@@ -114,7 +115,7 @@ export function adminRoute<T>(
       if (opts.auth !== "none") {
         auth = await loadSession(sessionToken);
         if (!auth) return apiError(401, "unauthenticated");
-        if (auth.session.mfaPending && opts.auth !== "mfa-pending") return apiError(401, "mfa_required");
+        if (opts.auth !== "mfa-pending" && stillPending(await getMfaPolicy(), auth.session.mfaPending)) return apiError(401, "mfa_required");
         if (opts.permission && !can(auth.user.role, opts.permission)) {
           await securityEvent({
             type: "permission_denied",

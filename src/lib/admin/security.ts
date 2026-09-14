@@ -6,7 +6,8 @@ import { audit } from "@/lib/auth/log";
 import { hashIp } from "@/lib/auth/ip";
 import { revokeAllSessions } from "@/lib/auth/session";
 import type { SessionWithUser } from "@/lib/auth/session";
-import type { Role } from "@/lib/auth/rbac";
+import { mfaRequired, type Role } from "@/lib/auth/rbac";
+import { bustMfaPolicy } from "@/lib/auth/policy";
 import { getSetting, setSetting } from "@/lib/admin/settings";
 import { ACCESS_TAG } from "@/lib/security/access";
 import { cidrSize, parseCidr, parseIp } from "@/lib/security/cidr";
@@ -15,7 +16,7 @@ import { runDependencyAudit } from "@/lib/security/deps";
 import type { Advisory, DependencySummary } from "@/lib/security/deps-types";
 import { gradeHeaders, type HeaderReport } from "@/lib/security/headers-grade";
 import { trustedOrigin } from "@/lib/seo/origin";
-import { EDITABLE_LIMITS, type AccessRuleInput, type EditableLimit, type RateLimitInput, type TurnstileInput, type UserActionInput } from "@/lib/schemas/security";
+import { EDITABLE_LIMITS, type AccessRuleInput, type EditableLimit, type MfaPolicyInput, type RateLimitInput, type TurnstileInput, type UserActionInput } from "@/lib/schemas/security";
 import { parseTableParams, type TableParams } from "@/app/(admin)/_lib/table";
 
 // Write and read side of the security manager (brief §3.7). Owner and Admin
@@ -310,6 +311,38 @@ export async function saveTurnstile(input: TurnstileInput, actor: Actor): Promis
   await audit({ actorId: actor.user.id, actorEmail: actor.user.email, action: "security.turnstile.update", entityType: "settings", entityId: "turnstile", before, after: input, ipHash: actor.ipHash });
   bust("turnstile");
   return { ok: true };
+}
+
+// ---------- Second factor policy ----------
+
+// Owner only (settings:owner, checked by the route): it decides what a
+// password alone is worth. Read by every sign in within the policy cache
+// window; the instance that saved it reads the new value at once.
+export async function saveMfaPolicy(input: MfaPolicyInput, actor: Actor): Promise<void> {
+  const before = await getSetting("auth_policy");
+  await setSetting("auth_policy", input, actor.user.id);
+  await audit({ actorId: actor.user.id, actorEmail: actor.user.email, action: "security.mfa_policy.update", entityType: "settings", entityId: "auth_policy", before, after: input, ipHash: actor.ipHash });
+  bustMfaPolicy();
+}
+
+export type SecondFactorStats = {
+  total: number;
+  enrolled: number;
+  adminsWithout: { name: string; email: string; role: string }[];
+  othersWithout: number;
+};
+
+// Who has an authenticator and who has not, so the policy page can say who a
+// stricter level would send to enrol at their next sign in.
+export async function secondFactorStats(): Promise<SecondFactorStats> {
+  const rows = await getDb().select({ name: users.name, email: users.email, role: users.role, totpEnabled: users.totpEnabled }).from(users).where(eq(users.status, "active"));
+  const without = rows.filter((r) => !r.totpEnabled);
+  return {
+    total: rows.length,
+    enrolled: rows.length - without.length,
+    adminsWithout: without.filter((r) => mfaRequired(r.role)).map(({ name, email, role }) => ({ name, email, role })),
+    othersWithout: without.filter((r) => !mfaRequired(r.role)).length,
+  };
 }
 
 // ---------- Sessions and users ----------

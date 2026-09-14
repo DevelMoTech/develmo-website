@@ -5,7 +5,8 @@ import { sendEmail } from "@/lib/email";
 import { consumeLimit, peekLimit, retryAfterSeconds } from "@/lib/ratelimit";
 import { audit, securityEvent } from "./log";
 import { dummyPasswordHash, hashPassword, verifyPassword } from "./password";
-import { canChangeRole, canRemoveUser, invitableRoles, mfaRequired, type Role } from "./rbac";
+import { getMfaPolicy, mustEnrol, secondFactorAsked } from "./policy";
+import { canChangeRole, canRemoveUser, invitableRoles, type Role } from "./rbac";
 import {
   createSession,
   revokeAllSessions,
@@ -21,6 +22,7 @@ import {
   generateRecoveryCodes,
   hashRecoveryCode,
   newTotpSecret,
+  normaliseRecoveryCode,
   totpQrDataUrl,
   totpUri,
   verifyTotp,
@@ -86,7 +88,8 @@ export async function login(
     return { ok: false, code: "invalid" };
   }
 
-  const mfaPending = user.totpEnabled;
+  const policy = await getMfaPolicy();
+  const mfaPending = secondFactorAsked(policy, user.totpEnabled);
   const s = await createSession({ userId: user.id, ipHash: ctx.ipHash, userAgent: ctx.userAgent, mfaPending });
   await db.update(users).set({ lastLoginAt: new Date() }).where(eq(users.id, user.id));
   await securityEvent({ type: "login_success", userId: user.id, email: user.email, ipHash: ctx.ipHash, path: "/admin/login", userAgent: ctx.userAgent, meta: { mfaPending } });
@@ -96,7 +99,7 @@ export async function login(
     expires: s.absoluteExpiresAt,
     mfaPending,
     mustChangePassword: user.mustChangePassword,
-    needsMfaEnrolment: mfaRequired(user.role) && !user.totpEnabled,
+    needsMfaEnrolment: mustEnrol(policy, user),
   };
 }
 
@@ -109,9 +112,17 @@ export async function logout(auth: SessionWithUser, ctx: Ctx): Promise<void> {
 // MFA
 // ---------------------------------------------------------------------------
 
+// Why a code was refused. Recorded on the mfa_failed event and returned to
+// the form, which turns it into advice. Never the code itself.
+export type MfaRefusal =
+  | { kind: "totp"; reason: "wrong" | "replay" | "malformed" }
+  | { kind: "totp"; reason: "clock"; driftSeconds: number }
+  | { kind: "recovery"; reason: "no_match" }
+  | { kind: "unrecognised"; reason: "malformed" };
+
 export type MfaResult =
   | { ok: true; token: string }
-  | { ok: false; code: "invalid" }
+  | ({ ok: false; code: "invalid"; driftSeconds?: number } & MfaRefusal)
   | { ok: false; code: "rate_limited"; retryAfter: number };
 
 export async function verifyMfa(auth: SessionWithUser, code: string, ip: string, ctx: Ctx): Promise<MfaResult> {
@@ -123,16 +134,29 @@ export async function verifyMfa(auth: SessionWithUser, code: string, ip: string,
     return { ok: false, code: "rate_limited", retryAfter: retryAfterSeconds(ipLimit.limited ? ipLimit : userLimit) };
   }
   const db = getDb();
+  // Six digits, spaces allowed (autofill pastes "123 456"), is an app code.
+  // Anything that normalises to ten characters is a recovery code. Anything
+  // else is refused as unrecognised before touching either check.
+  const digits = code.replace(/\s+/g, "");
+  const isTotp = /^\d{6}$/.test(digits);
+  const isRecovery = !isTotp && normaliseRecoveryCode(code).length === 10;
   let passed = false;
   let usedRecovery = false;
+  let refusal: MfaRefusal = { kind: "unrecognised", reason: "malformed" };
 
-  if (/^\d{6}$/.test(code) && user.totpSecretEnc && user.totpEnabled) {
-    const result = await verifyTotp(decryptSecret(user.totpSecretEnc), code, user.totpLastStep);
-    if (result.valid) {
-      passed = true;
-      await db.update(users).set({ totpLastStep: result.step }).where(eq(users.id, user.id));
+  if (isTotp) {
+    if (user.totpSecretEnc && user.totpEnabled) {
+      const result = await verifyTotp(decryptSecret(user.totpSecretEnc), digits, user.totpLastStep);
+      if (result.valid) {
+        passed = true;
+        await db.update(users).set({ totpLastStep: result.step }).where(eq(users.id, user.id));
+      } else {
+        refusal = result.reason === "clock" ? { kind: "totp", reason: "clock", driftSeconds: result.driftSeconds } : { kind: "totp", reason: result.reason };
+      }
+    } else {
+      refusal = { kind: "totp", reason: "wrong" };
     }
-  } else if (code.length >= 8) {
+  } else if (isRecovery) {
     const target = hashRecoveryCode(code);
     const rows = await db
       .select()
@@ -153,13 +177,20 @@ export async function verifyMfa(auth: SessionWithUser, code: string, ip: string,
         usedRecovery = true;
       }
     }
+    if (!passed) refusal = { kind: "recovery", reason: "no_match" };
   }
 
   if (!passed) {
-    await consumeLimit("mfa", ip);
-    await consumeLimit("mfa", `user:${user.id}`);
-    await securityEvent({ type: "mfa_failed", userId: user.id, email: user.email, ipHash: ctx.ipHash, path: "/admin/mfa/verify", userAgent: ctx.userAgent });
-    return { ok: false, code: "invalid" };
+    // A typo that is not a code of either kind is refused without checking
+    // anything, and without spending one of the five attempts on it.
+    if (refusal.kind !== "unrecognised") {
+      await consumeLimit("mfa", ip);
+      await consumeLimit("mfa", `user:${user.id}`);
+    }
+    // The reason is on the event, so an administrator can see from the
+    // events page why someone was refused: a fast clock, an old recovery code.
+    await securityEvent({ type: "mfa_failed", userId: user.id, email: user.email, ipHash: ctx.ipHash, path: "/admin/mfa/verify", userAgent: ctx.userAgent, meta: refusal });
+    return { ok: false, code: "invalid", ...refusal };
   }
 
   // Privilege change: the session becomes fully authenticated, so rotate.
@@ -175,37 +206,55 @@ export async function verifyMfa(auth: SessionWithUser, code: string, ip: string,
   return { ok: true, token };
 }
 
-// Starts (or restarts) enrolment: a fresh secret is stored encrypted with
-// totpEnabled=false until the user confirms a code from their app.
+// Starts (or resumes) enrolment: a secret is stored encrypted with
+// totpEnabled=false until the user confirms a code from their app. A pending
+// secret is reused rather than replaced, so reloading the page, or opening
+// it twice, does not quietly invalidate the QR code the person has already
+// scanned; a fresh one is minted only when there is nothing pending.
 export async function beginTotpEnrolment(user: UserRow): Promise<{ secret: string; uri: string; qr: string }> {
-  const secret = newTotpSecret();
-  await getDb()
-    .update(users)
-    .set({ totpSecretEnc: encryptSecret(secret), totpEnabled: false, totpLastStep: null })
-    .where(eq(users.id, user.id));
+  let secret: string | null = null;
+  if (user.totpSecretEnc && !user.totpEnabled) {
+    try {
+      secret = decryptSecret(user.totpSecretEnc);
+    } catch {
+      secret = null;
+    }
+  }
+  if (!secret) {
+    secret = newTotpSecret();
+    await getDb()
+      .update(users)
+      .set({ totpSecretEnc: encryptSecret(secret), totpEnabled: false, totpLastStep: null })
+      .where(eq(users.id, user.id));
+  }
   const uri = totpUri(user.email, secret);
   return { secret, uri, qr: await totpQrDataUrl(uri) };
 }
 
 export type EnrolResult =
   | { ok: true; token: string; recoveryCodes: string[] }
-  | { ok: false; code: "invalid" | "not_started" };
+  | { ok: false; code: "not_started" }
+  | { ok: false; code: "invalid"; reason: "wrong" | "replay" | "malformed" | "clock"; driftSeconds?: number };
 
 export async function confirmTotpEnrolment(auth: SessionWithUser, code: string, ctx: Ctx): Promise<EnrolResult> {
   const { user, session } = auth;
   if (!user.totpSecretEnc || user.totpEnabled) return { ok: false, code: "not_started" };
-  const result = await verifyTotp(decryptSecret(user.totpSecretEnc), code, null);
+  const result = await verifyTotp(decryptSecret(user.totpSecretEnc), code.replace(/\s+/g, ""), null);
   if (!result.valid) {
-    await securityEvent({ type: "mfa_failed", userId: user.id, email: user.email, ipHash: ctx.ipHash, path: "/admin/mfa/enrol", userAgent: ctx.userAgent });
-    return { ok: false, code: "invalid" };
+    const driftSeconds = result.reason === "clock" ? result.driftSeconds : undefined;
+    await securityEvent({ type: "mfa_failed", userId: user.id, email: user.email, ipHash: ctx.ipHash, path: "/admin/mfa/enrol", userAgent: ctx.userAgent, meta: { kind: "totp", reason: result.reason, driftSeconds } });
+    return { ok: false, code: "invalid", reason: result.reason, driftSeconds };
   }
   const db = getDb();
   const codes = generateRecoveryCodes();
-  await db.transaction(async (tx) => {
-    await tx.update(users).set({ totpEnabled: true, totpLastStep: result.step }).where(eq(users.id, user.id));
-    await tx.delete(recoveryCodes).where(eq(recoveryCodes.userId, user.id));
-    await tx.insert(recoveryCodes).values(codes.map((c) => ({ userId: user.id, codeHash: hashRecoveryCode(c) })));
-  });
+  // Three statements rather than a transaction: the neon-http driver used on
+  // Vercel has no transactions and throws on the call, which would end
+  // enrolment with a 500 on the live site. The order keeps a failure safe:
+  // the codes are replaced first, and the account is only switched on once
+  // its new codes are in place.
+  await db.delete(recoveryCodes).where(eq(recoveryCodes.userId, user.id));
+  await db.insert(recoveryCodes).values(codes.map((c) => ({ userId: user.id, codeHash: hashRecoveryCode(c) })));
+  await db.update(users).set({ totpEnabled: true, totpLastStep: result.step }).where(eq(users.id, user.id));
   await revokeOtherSessions(user.id, session.id);
   const token = await rotateSessionToken(session.id, { mfaPending: false });
   await audit({ actorId: user.id, actorEmail: user.email, action: "mfa.enrol", entityType: "user", entityId: user.id, ipHash: ctx.ipHash });
@@ -219,10 +268,12 @@ export async function resetOwnMfa(auth: SessionWithUser, currentPassword: string
   const { user } = auth;
   if (!(await verifyPassword(user.passwordHash, currentPassword))) return { ok: false };
   const db = getDb();
-  await db.transaction(async (tx) => {
-    await tx.update(users).set({ totpEnabled: false, totpSecretEnc: null, totpLastStep: null }).where(eq(users.id, user.id));
-    await tx.delete(recoveryCodes).where(eq(recoveryCodes.userId, user.id));
-  });
+  // Two statements rather than a transaction, for the same driver reason as
+  // enrolment. Switching off first means a failure in the second statement
+  // leaves stale hashes behind an account that is no longer asked for a
+  // code, which is harmless; the next enrolment replaces them.
+  await db.update(users).set({ totpEnabled: false, totpSecretEnc: null, totpLastStep: null }).where(eq(users.id, user.id));
+  await db.delete(recoveryCodes).where(eq(recoveryCodes.userId, user.id));
   await audit({ actorId: user.id, actorEmail: user.email, action: "mfa.reset", entityType: "user", entityId: user.id, ipHash: ctx.ipHash });
   await securityEvent({ type: "mfa_reset", userId: user.id, email: user.email, ipHash: ctx.ipHash, userAgent: ctx.userAgent });
   return { ok: true };
@@ -332,7 +383,7 @@ export async function redeemInvite(
   await db.update(users).set({ lastLoginAt: new Date() }).where(eq(users.id, user.id));
   await audit({ actorId: user.id, actorEmail: user.email, action: "user.create", entityType: "user", entityId: user.id, after: publicUser(user), ipHash: ctx.ipHash });
   await securityEvent({ type: "invite_redeemed", userId: user.id, email: user.email, ipHash: ctx.ipHash, path: "/admin/signup", userAgent: ctx.userAgent });
-  return { ok: true, token: s.token, expires: s.absoluteExpiresAt, needsMfaEnrolment: mfaRequired(user.role) };
+  return { ok: true, token: s.token, expires: s.absoluteExpiresAt, needsMfaEnrolment: mustEnrol(await getMfaPolicy(), user) };
 }
 
 export async function revokeInvite(actor: Actor, inviteId: string, ctx: Ctx): Promise<boolean> {

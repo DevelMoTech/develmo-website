@@ -39,10 +39,9 @@ export function describeError(status: number, code: string | undefined, retryAft
     case "invalid_credentials":
       return "Invalid email or password.";
     case "invalid_code":
-      // The usual causes, in the order they happen: a stale entry in the
-      // authenticator from an earlier enrolment, a device clock set by hand,
-      // and a code read a moment too late.
-      return "That code was not accepted. Make sure you are reading the entry for this account and not an older one, that the time on your device is set automatically, then try the next code. A recovery code works here too.";
+      // The verify and enrol forms replace this with the reason the route
+      // gives; see describeCodeRejection.
+      return "That code was not accepted.";
     case "invalid_current":
       return "Your current password was not accepted.";
     case "csrf":
@@ -67,6 +66,33 @@ export function describeError(status: number, code: string | undefined, retryAft
       return "That address already has an account.";
     default:
       return "Something went wrong. Please try again.";
+  }
+}
+
+// Why a second-factor code was refused, from the detail the verify and enrol
+// routes add to invalid_code. Specific on purpose: "not accepted" left people
+// guessing between clocks, stale authenticator entries and old recovery
+// codes, and the server knows which it was.
+export type CodeRejection = { kind?: string; reason?: string; driftSeconds?: number };
+
+export function describeCodeRejection(d: CodeRejection, context: "verify" | "enrol" = "verify"): string {
+  const drift = d.driftSeconds ?? 0;
+  const amount = Math.abs(drift) >= 120 ? `${Math.round(Math.abs(drift) / 60)} minutes` : `${Math.abs(drift)} seconds`;
+  switch (d.reason) {
+    case "clock":
+      return drift > 0
+        ? `That code belongs to a time about ${amount} ahead of this server, so the clock on your device is fast. Set its date and time to automatic, then enter the newest code.`
+        : `That code is about ${amount} old, or the clock on your device is that far behind. Enter the code your app shows right now; if it keeps happening, set the date and time on your device to automatic.`;
+    case "replay":
+      return "That code has already been used. Wait for your app to show the next one, then enter that.";
+    case "no_match":
+      return "That recovery code was not accepted. Only the codes shown the last time two-factor authentication was set up work, and each works once. They never contain the letters I or O or the digits 0 or 1.";
+    case "malformed":
+      return context === "enrol" ? "Enter the 6 digit code the app shows." : "Enter the 6 digit code from your authenticator app, or a recovery code in the form ABCDE-FGHJK.";
+    default:
+      return context === "enrol"
+        ? "That code was not accepted. Make sure you are reading the entry you have just added, not an older DevelMo Admin entry, and enter the code it shows right now."
+        : "That code was not accepted. If your authenticator shows more than one DevelMo Admin entry, use the newest one; older entries stopped working when two-factor authentication was set up again. A recovery code works here too.";
   }
 }
 

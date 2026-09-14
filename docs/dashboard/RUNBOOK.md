@@ -135,9 +135,13 @@ has an account, this script can never make another. It prints a
 one-time sign-in link and a temporary password. Use them once, then:
 
 1. Sign in at `/admin/login`.
-2. You are sent straight to `/admin/mfa/enrol`. **Owner and Admin cannot reach
-   the console without a second factor.** Scan the QR code with any TOTP app
-   (1Password, Authy, Google Authenticator) and enter the six digit code.
+2. Set up a second factor: Account, Security, "Set up authenticator", or go
+   to `/admin/mfa/enrol`. Scan the QR code with any TOTP app (1Password,
+   Authy, Google Authenticator) and enter the six digit code. Whether the
+   console *requires* this is a policy at `/admin/security/authentication`:
+   optional by default, or required for Owner and Admin, or for everyone.
+   Under "optional" nobody is made to, and everyone who has set one up is
+   asked for it at each sign in.
 3. Save the recovery codes it shows you. They are shown once. Each works once.
 4. Change the password at `/admin/account`.
 5. Remove `ADMIN_BOOTSTRAP_EMAIL` and `ADMIN_BOOTSTRAP_TOKEN` from the
@@ -275,6 +279,7 @@ that commit gives you the site exactly as it was before this work started.
 | Someone asks for access | `/admin/users`, Access requests. Approve to send them an invitation, choosing the role; decline to close it with no email. A declined person is never told, which is deliberate |
 | Remove someone who has left | `/admin/users`, set status to suspended, then revoke their sessions at `/admin/security/sessions` |
 | Someone lost their phone | `/admin/users`, reset their second factor. They enrol again at next sign-in |
+| Require, allow or switch off the second factor for everyone | `/admin/security/authentication`. Off, optional (the default), required for Owner and Admin, or required for everyone. Owner only; applies to the next sign in at once |
 | Read enquiries | `/admin/submissions` |
 | An enquiry did not arrive by email | `/admin/submissions/<id>`, Delivery, Replay. The row was stored before delivery was attempted, so nothing is ever lost |
 | Publish a post later | `/admin/posts/<id>`, Publishing, set a date. Vercel Cron publishes it |
@@ -374,9 +379,21 @@ cannot fill the inbox with bounces; with the mailbox configured, the
 durability tests deliver a handful of real messages to it instead of
 recording a failure.
 
+**The second factor refuses a right code.** The prompt says why: a code for a
+device clock that is minutes out ("about 4 minutes ahead"), a code already
+used in the same half minute, or a recovery code from an earlier set-up. A
+fast or slow clock: set the phone's date and time to automatic. Two "DevelMo
+Admin" entries in the authenticator app: only the newest works, delete the
+other. Recovery codes: only the set shown at the most recent set-up works,
+each once. Five refusals in ten minutes lock the prompt for the rest of those
+ten minutes. The reason is also recorded on each `mfa_failed` row at
+`/admin/security/events`.
+
 **Locked out of the Owner account.** If you still have a recovery code, use it
-at the second factor prompt. If not, and no other Owner or Admin can help,
-clear the second factor directly:
+at the second factor prompt. If another Owner can sign in, they can switch
+the policy to "off" at `/admin/security/authentication`, which lets you in on
+the password alone until you set the authenticator up again. If not, clear
+the second factor directly:
 
 ```sql
 update users set totp_enabled = false, totp_secret_enc = null where email = '<you>';
@@ -421,8 +438,10 @@ That runs `db:up` first (you will see `[ok] postgres started ...` or
 - Admin console: <http://localhost:3000/admin/login>, or the "Admin" link in
   the footer of any page.
 
-Owner and Admin accounts need the second factor after the password, so have
-your authenticator app to hand.
+An account that has set up a second factor is asked for it after the
+password, so have your authenticator app to hand. Nobody is made to set one
+up unless the policy at `/admin/security/authentication` says so (it is
+"optional" until you change it).
 
 **If the console says "The database is not reachable right now".** Postgres
 has stopped since the site started, usually because the terminal that started

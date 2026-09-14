@@ -13,7 +13,7 @@ try {
 
 import { hashPassword } from "../../src/lib/auth/password";
 import { sha256Hex, signToken } from "../../src/lib/auth/tokens";
-import { encryptSecret } from "../../src/lib/auth/totp";
+import { encryptSecret, hashRecoveryCode } from "../../src/lib/auth/totp";
 
 export const CSRF_COOKIE = "__Host-dm_csrf";
 export const SESSION_COOKIE = "__Host-dm_session";
@@ -46,6 +46,11 @@ export async function createUser(opts: {
     [opts.email, opts.name ?? "E2E User", passwordHash, opts.role, opts.totpSecret ? encryptSecret(opts.totpSecret) : null, !!opts.totpSecret],
   );
   return res.rows[0].id;
+}
+
+// Plants recovery codes for a user the way enrolment does: hashes only.
+export async function addRecoveryCodes(userId: string, codes: string[]): Promise<void> {
+  for (const c of codes) await db().query(`insert into recovery_codes (user_id, code_hash) values ($1, $2)`, [userId, hashRecoveryCode(c)]);
 }
 
 export async function createInvite(opts: {

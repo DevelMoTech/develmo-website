@@ -4,7 +4,8 @@ import { redirect } from "next/navigation";
 import { getClientIp, hashIp } from "./ip";
 import { DatabaseUnavailableError, isDatabaseUnavailable } from "@/db/errors";
 import { CSRF_COOKIE, SESSION_COOKIE, loadSession, type SessionWithUser } from "./session";
-import { can, mfaRequired, type Permission } from "./rbac";
+import { can, type Permission } from "./rbac";
+import { getMfaPolicy, mustEnrol, stillPending } from "./policy";
 
 // Session for the current request, deduplicated per render. An unreachable
 // database is reported as such rather than as a raw query failure, so a page
@@ -75,14 +76,16 @@ export async function requirePageUser(
   }
   if (!auth) loginRedirect(path);
   const { session, user } = auth;
-  if (session.mfaPending && !opts.allowMfaPending) {
+  const policy = await getMfaPolicy();
+  const pending = stillPending(policy, session.mfaPending);
+  if (pending && !opts.allowMfaPending) {
     redirect(`/admin/mfa/verify?next=${encodeURIComponent(path)}`);
   }
-  if (!session.mfaPending) {
+  if (!pending) {
     if (user.mustChangePassword && !opts.allowMustChangePassword) {
       redirect("/admin/account?required=password");
     }
-    if (mfaRequired(user.role) && !user.totpEnabled && !opts.allowMfaUnenrolled && !user.mustChangePassword) {
+    if (mustEnrol(policy, user) && !opts.allowMfaUnenrolled && !user.mustChangePassword) {
       redirect("/admin/mfa/enrol");
     }
   }

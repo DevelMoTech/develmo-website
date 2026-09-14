@@ -201,6 +201,7 @@ const CASES: Case[] = [
   { name: "rateLimitSchema", schema: security.rateLimitSchema, ok: { key: "login", maxRequests: 5, windowSeconds: 900 }, bad: { key: "login", maxRequests: 5, windowSeconds: 1 } },
   { name: "turnstileSchema", schema: security.turnstileSchema, ok: { enabled: true, siteKey: "0x4AAA-BBBB_cccc" }, bad: { enabled: true, siteKey: "has spaces" } },
   { name: "securityRetentionSchema", schema: security.securityRetentionSchema, ok: { eventDays: 180 }, bad: { eventDays: -1 } },
+  { name: "mfaPolicySchema", schema: security.mfaPolicySchema, ok: { mfa: "admins" }, bad: { mfa: "always" } },
   { name: "sessionRevokeSchema", schema: security.sessionRevokeSchema, ok: { sessionId: UUID }, bad: { sessionId: UUID.slice(1) } },
   { name: "userActionSchema", schema: security.userActionSchema, ok: { userId: UUID, action: "logout_all" }, bad: { userId: UUID, action: "delete_everything" } },
   { name: "headersCheckSchema", schema: security.headersCheckSchema, ok: { path: "/what-we-do" }, bad: { path: "/what-we-do?x=1" } },

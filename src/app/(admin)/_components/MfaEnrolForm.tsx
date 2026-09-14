@@ -1,28 +1,31 @@
 "use client";
 
 import { useState } from "react";
-import { useSubmit } from "./api-client";
+import { describeCodeRejection, useSubmit, type CodeRejection } from "./api-client";
 
 export function MfaEnrolForm({ csrf, qr, secret, email }: { csrf: string; qr: string; secret: string; email: string }) {
-  const { run, pending, error } = useSubmit();
+  const { run, pending, error, setError } = useSubmit();
   const [code, setCode] = useState("");
   const [codes, setCodes] = useState<string[] | null>(null);
   const [redirectTo, setRedirectTo] = useState("/admin");
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const res = await run<{ recoveryCodes: string[]; redirectTo: string }>("/api/admin/auth/mfa/enrol", { code }, csrf);
+    const res = await run<{ recoveryCodes: string[]; redirectTo: string } & CodeRejection>("/api/admin/auth/mfa/enrol", { code: code.replace(/\s+/g, "") }, csrf);
     if (res?.data.ok) {
       setCodes(res.data.recoveryCodes);
       setRedirectTo(res.data.redirectTo || "/admin");
+      return;
     }
+    if (res?.data.error === "invalid_code") setError(describeCodeRejection(res.data, "enrol"));
+    else if (res?.data.error === "invalid") setError(describeCodeRejection({ reason: "malformed" }, "enrol"));
   }
 
   if (codes) {
     return (
       <div>
         <div className="adm-alert adm-alert-success" role="status" aria-live="polite">
-          <p>Two-factor authentication is on. Save these recovery codes somewhere safe. Each one signs you in once if you lose your authenticator.</p>
+          <p>Two-factor authentication is on. Save these recovery codes somewhere safe. Each one signs you in once if you lose your authenticator. Any recovery codes from an earlier set-up no longer work.</p>
         </div>
         <ul className="adm-codes">
           {codes.map((c) => (
@@ -38,6 +41,11 @@ export function MfaEnrolForm({ csrf, qr, secret, email }: { csrf: string; qr: st
 
   return (
     <form className="adm-form" onSubmit={onSubmit} noValidate>
+      <div className="adm-alert adm-alert-info" role="note">
+        <p>
+          If your authenticator app already has a DevelMo Admin entry for {email}, delete it first. Only the entry you add now will work, and recovery codes you saved before stop working.
+        </p>
+      </div>
       <p className="adm-help">
         1. Scan this code with an authenticator app (Google Authenticator, Microsoft Authenticator, 1Password, Authy).
       </p>
@@ -54,8 +62,7 @@ export function MfaEnrolForm({ csrf, qr, secret, email }: { csrf: string; qr: st
           className="adm-input adm-input-code"
           inputMode="numeric"
           autoComplete="one-time-code"
-          pattern="[0-9]{6}"
-          maxLength={6}
+          maxLength={8}
           required
           value={code}
           onChange={(e) => setCode(e.target.value)}

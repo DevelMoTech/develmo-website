@@ -7,7 +7,8 @@ import { ButtonLink } from "@/app/(admin)/_components/ui/Button";
 import { Tabs } from "@/app/(admin)/_components/ui/Tabs";
 import { getCsrfToken, requirePageUser } from "@/lib/auth/current";
 import { recoveryCodesRemaining } from "@/lib/auth/flows";
-import { can, mfaRequired } from "@/lib/auth/rbac";
+import { getMfaPolicy, mfaRequiredUnder, mustEnrol } from "@/lib/auth/policy";
+import { can } from "@/lib/auth/rbac";
 import { listActiveSessions } from "@/lib/auth/session";
 import { describeUserAgent } from "@/lib/auth/ua";
 
@@ -33,7 +34,8 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
     createdAt: fmt(s.createdAt),
   }));
   const mustChange = user.mustChangePassword || sp.required === "password";
-  const needsEnrol = mfaRequired(user.role) && !user.totpEnabled && !user.mustChangePassword;
+  const policy = await getMfaPolicy();
+  const needsEnrol = mustEnrol(policy, user) && !user.mustChangePassword;
   const initialTab = mustChange || needsEnrol ? "security" : sp.tab;
 
   return (
@@ -82,13 +84,20 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
                     {user.totpEnabled ? (
                       <>
                         <p>On. {codesLeft} recovery code{codesLeft === 1 ? "" : "s"} left.</p>
+                        {policy === "off" && <p className="adm-help">Not asked for at sign in while the console policy is off (Security, Authentication). It is kept for when that changes.</p>}
                         <div style={{ marginBlockStart: 14 }}>
                           <MfaResetForm csrf={csrf} />
                         </div>
                       </>
                     ) : (
                       <>
-                        <p>{mfaRequired(user.role) ? "Required for your role." : "Optional for your role, recommended."}</p>
+                        <p>
+                          {policy === "off"
+                            ? "Turned off for the whole console under Security, Authentication. Anything you set up here is kept and asked for once it is turned back on."
+                            : mfaRequiredUnder(policy, user.role)
+                              ? "Required for your role."
+                              : "Optional for your role, recommended. Once set up, you are asked for a code at every sign in."}
+                        </p>
                         <div className="adm-actions" style={{ marginBlockStart: 14 }}>
                           <ButtonLink variant="primary" size="sm" href="/admin/mfa/enrol">Set up authenticator</ButtonLink>
                         </div>

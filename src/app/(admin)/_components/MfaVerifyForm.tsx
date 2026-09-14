@@ -1,17 +1,36 @@
 "use client";
 
 import { useState } from "react";
-import { useSubmit } from "./api-client";
+import { describeCodeRejection, useSubmit, type CodeRejection } from "./api-client";
 
+// One field takes both kinds of code. The toggle only changes the label and
+// the keyboard: the server decides what it was given, and nothing typed or
+// pasted is cut short (a recovery code pasted into "6 digit code" used to
+// lose its tail to maxLength and fail for no visible reason).
 export function MfaVerifyForm({ csrf, next }: { csrf: string; next: string }) {
-  const { run, pending, error } = useSubmit();
+  const { run, pending, error, setError } = useSubmit();
   const [code, setCode] = useState("");
   const [useRecovery, setUseRecovery] = useState(false);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const res = await run<{ redirectTo: string }>("/api/admin/auth/mfa/verify", { code, next }, csrf);
-    if (res?.data.ok) window.location.assign(res.data.redirectTo || next);
+    const res = await run<{ redirectTo: string } & CodeRejection>("/api/admin/auth/mfa/verify", { code, next }, csrf);
+    if (res?.data.ok) {
+      window.location.assign(res.data.redirectTo || next);
+      return;
+    }
+    // The route says why: a clock that is out, a code already used, a
+    // recovery code from an earlier set-up. Say that instead of "not accepted".
+    // A body the schema refused (too short, too long) is a malformed code too,
+    // not "check the highlighted fields" with nothing highlighted.
+    if (res?.data.error === "invalid_code") setError(describeCodeRejection(res.data));
+    else if (res?.data.error === "invalid") setError(describeCodeRejection({ reason: "malformed" }));
+  }
+
+  function onChange(value: string) {
+    setCode(value);
+    // Letters can only be a recovery code; switch the label and keyboard.
+    if (!useRecovery && /[^\d\s]/.test(value)) setUseRecovery(true);
   }
 
   return (
@@ -25,17 +44,16 @@ export function MfaVerifyForm({ csrf, next }: { csrf: string; next: string }) {
           className={useRecovery ? "adm-input" : "adm-input adm-input-code"}
           inputMode={useRecovery ? "text" : "numeric"}
           autoComplete="one-time-code"
-          pattern={useRecovery ? undefined : "[0-9]{6}"}
-          maxLength={useRecovery ? 16 : 6}
+          maxLength={16}
           required
           autoFocus
           value={code}
-          onChange={(e) => setCode(e.target.value)}
+          onChange={(e) => onChange(e.target.value)}
         />
         <p className="adm-help">
           {useRecovery
-            ? "Each recovery code works once."
-            : "Open your authenticator app and enter the code for DevelMo Admin."}
+            ? "One of the codes shown when two-factor authentication was set up. Each works once."
+            : "From your authenticator app, the DevelMo Admin entry. A recovery code works here too."}
         </p>
       </div>
       {error && (
@@ -52,6 +70,7 @@ export function MfaVerifyForm({ csrf, next }: { csrf: string; next: string }) {
         onClick={() => {
           setUseRecovery((v) => !v);
           setCode("");
+          setError(null);
         }}
       >
         {useRecovery ? "Use my authenticator app instead" : "Use a recovery code instead"}

@@ -76,6 +76,16 @@ export const turnstileSchema = z.object({
 export type TurnstileInput = z.infer<typeof turnstileSchema>;
 export const DEFAULT_TURNSTILE: TurnstileInput = { enabled: false, siteKey: "" };
 
+// The second-factor policy (Security, Authentication). "off": nobody is
+// asked, enrolments are kept. "optional": whoever set one up is asked, nobody
+// is made to. "admins": Owner and Admin must set one up (the brief's rule).
+// "everyone": every account must.
+export const MFA_POLICIES = ["off", "optional", "admins", "everyone"] as const;
+export type MfaPolicy = (typeof MFA_POLICIES)[number];
+export const mfaPolicySchema = z.object({ mfa: z.enum(MFA_POLICIES) });
+export type MfaPolicyInput = z.infer<typeof mfaPolicySchema>;
+export const DEFAULT_MFA_POLICY: MfaPolicyInput = { mfa: "optional" };
+
 export const securityRetentionSchema = z.object({
   // Days to keep security events before the cron deletes them. 0 keeps them
   // forever; the audit log is separate and is never deleted.

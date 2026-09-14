@@ -492,6 +492,15 @@ textarea.adm-input { min-block-size: 120px; resize: vertical; }
 .adm-error { font-size: 13px; color: var(--adm-danger); margin: 0; font-weight: 600; }
 .adm-check { display: inline-flex; align-items: center; gap: 10px; font-size: 14px; min-block-size: 44px; cursor: pointer; }
 .adm-check input { inline-size: 20px; block-size: 20px; accent-color: var(--adm-primary-ink); margin: 0; }
+/* A group of radio choices with a description each (the second-factor policy). */
+.adm-fieldset { border: 0; padding: 0; margin: 0; min-inline-size: 0; }
+.adm-choices { display: grid; gap: 8px; margin-block-start: 6px; }
+.adm-choice { display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; border: var(--adm-border-w) solid var(--adm-line); border-radius: 10px; cursor: pointer; min-block-size: 44px; font-size: 14px; }
+.adm-choice:hover { background: var(--adm-surface-2); }
+.adm-choice-on { border-color: var(--adm-primary); }
+.adm-choice input { inline-size: 20px; block-size: 20px; margin: 1px 0 0; flex: none; accent-color: var(--adm-primary-ink); }
+.adm-choice > span { display: grid; gap: 2px; }
+.adm-choice:has(input:disabled) { cursor: default; }
 .adm-switch { display: inline-flex; align-items: center; gap: 10px; min-block-size: 44px; background: none; border: 0; padding: 0; font: inherit; font-size: 14px; color: var(--adm-text); cursor: pointer; }
 .adm-switch-track { inline-size: 44px; block-size: 24px; border-radius: 999px; background: var(--adm-line-strong); position: relative; transition: background .15s; flex: none; border: var(--adm-border-w) solid transparent; }
 .adm-switch-track::after { content: ""; position: absolute; inset-block-start: 2px; inset-inline-start: 2px; inline-size: 18px; block-size: 18px; border-radius: 50%; background: var(--adm-surface); transition: transform .15s; box-shadow: 0 1px 2px rgba(0,0,0,.3); }

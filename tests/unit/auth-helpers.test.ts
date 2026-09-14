@@ -122,10 +122,43 @@ describe("TOTP", () => {
     const code = await generate({ secret });
     const first = await verifyTotp(secret, code, null);
     expect(first.valid).toBe(true);
+    if (!first.valid) throw new Error("unreachable");
     expect(typeof first.step).toBe("number");
-    expect((await verifyTotp(secret, code, first.step)).valid).toBe(false);
-    expect((await verifyTotp(secret, "000000", null)).valid).toBe(false);
-    expect((await verifyTotp(secret, "12345", null)).valid).toBe(false);
+    expect(first.delta).toBe(0);
+    expect(await verifyTotp(secret, code, first.step)).toEqual({ valid: false, reason: "replay" });
+    expect(await verifyTotp(secret, "12345", null)).toEqual({ valid: false, reason: "malformed" });
+    expect(await verifyTotp(secret, "12 3456", null)).toEqual({ valid: false, reason: "malformed" });
+  });
+
+  it("allows a clock up to a minute out, and says how far out a clock beyond that is", async () => {
+    const { newTotpSecret, verifyTotp } = await import("@/lib/auth/totp");
+    const secret = newTotpSecret();
+    const nowS = Math.floor(Date.now() / 1000);
+    const at = (offset: number) => generate({ secret, epoch: nowS + offset });
+    expect((await verifyTotp(secret, await at(-60), null)).valid).toBe(true);
+    expect((await verifyTotp(secret, await at(60), null)).valid).toBe(true);
+    const fast = await verifyTotp(secret, await at(240), null);
+    if (fast.valid || fast.reason !== "clock") throw new Error(`expected a clock refusal, got ${JSON.stringify(fast)}`);
+    expect(fast.driftSeconds).toBeGreaterThanOrEqual(210);
+    expect(fast.driftSeconds).toBeLessThanOrEqual(240);
+    const slow = await verifyTotp(secret, await at(-300), null);
+    if (slow.valid || slow.reason !== "clock") throw new Error(`expected a clock refusal, got ${JSON.stringify(slow)}`);
+    expect(slow.driftSeconds).toBeLessThanOrEqual(-270);
+    // An hour out is not a clock this diagnoses: it reads as a wrong code.
+    expect(await verifyTotp(secret, await at(3600), null)).toEqual({ valid: false, reason: "wrong" });
+  });
+
+  it("a last step beyond the window (a fast phone signing in twice in a minute) is a replay, never a crash", async () => {
+    const { newTotpSecret, verifyTotp } = await import("@/lib/auth/totp");
+    const secret = newTotpSecret();
+    const nowS = Math.floor(Date.now() / 1000);
+    const ahead = await verifyTotp(secret, await generate({ secret, epoch: nowS + 60 }), null);
+    if (!ahead.valid) throw new Error("a code two steps ahead is inside the window");
+    expect(ahead.delta).toBe(2);
+    // The same fast phone shows the same code a moment later.
+    expect(await verifyTotp(secret, await generate({ secret, epoch: nowS + 60 }), ahead.step)).toEqual({ valid: false, reason: "replay" });
+    // And a stored step far beyond anything the window can reach.
+    expect(await verifyTotp(secret, await generate({ secret }), Math.floor(nowS / 30) + 10)).toEqual({ valid: false, reason: "replay" });
   });
 
   it("recovery codes are unique, normalised and hashed", async () => {

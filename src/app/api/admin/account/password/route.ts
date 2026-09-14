@@ -1,6 +1,6 @@
 import { adminRoute, apiError, apiOk, setSessionCookie } from "@/lib/auth/api";
 import { changePassword } from "@/lib/auth/flows";
-import { mfaRequired } from "@/lib/auth/rbac";
+import { getMfaPolicy, mustEnrol } from "@/lib/auth/policy";
 import { changePasswordSchema } from "@/lib/schemas/auth";
 
 export const runtime = "nodejs";
@@ -10,7 +10,7 @@ export const POST = adminRoute({ auth: "required", schema: changePasswordSchema 
   const result = await changePassword(auth, body, { ipHash, userAgent });
   if (!result.ok) return apiError(400, result.code);
   const { user } = auth;
-  const redirectTo = mfaRequired(user.role) && !user.totpEnabled ? "/admin/mfa/enrol" : null;
+  const redirectTo = mustEnrol(await getMfaPolicy(), user) ? "/admin/mfa/enrol" : null;
   const res = apiOk({ redirectTo });
   setSessionCookie(res, result.token, auth.session.absoluteExpiresAt);
   return res;

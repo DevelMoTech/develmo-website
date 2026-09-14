@@ -353,9 +353,15 @@ lives in `src/lib/auth/rbac.ts` and is unit tested.
 | Editor | Content, posts, jobs, media, submissions. No users, no security, no settings |
 | Viewer | Read only, everywhere |
 
-Owner and Admin **must** hold a second factor. A session that has not cleared
-it is redirected to `/admin/mfa/enrol` on every admin route, which is worth
-knowing when writing tests, see §11.8.
+Whether a second factor is required is a policy (the `auth_policy` setting,
+Security, Authentication, Owner only): off, optional (the default), required
+for Owner and Admin (the rule the brief asked for), or required for everyone.
+Anyone who has set one up is asked for it at sign in unless the policy is
+off. Under a required level, a session without an authenticator is
+redirected to `/admin/mfa/enrol` on every admin route, which is worth knowing
+when writing tests, see §11.8. A refused code comes back with its reason
+(a clock that is out, a replayed code, an old recovery code), shown on the
+prompt and recorded on the `mfa_failed` event.
 
 **How an account comes into existence.** Exactly one way: a single-use
 invitation, redeemed at `/admin/signup?token=...`. The first Owner comes from
@@ -450,9 +456,10 @@ Five things the console changes on the live site, each proven end to end:
   fail to render with "Functions cannot be passed directly to Client
   Components". Props are data. Pass a string prefix and build the value in the
   client component.
-- **An Owner or Admin session is not signed in until the second factor is
-  cleared.** Skipping the MFA step in a test is not a login failure: every
-  admin route quietly answers with a redirect stub to `/admin/mfa/enrol`. A
+- **A session with an authenticator enrolled is not signed in until the
+  second factor is cleared** (and under a required policy, an Owner or Admin
+  without one is sent to enrol). Skipping the MFA step in a test is not a
+  login failure: every admin route quietly answers with a redirect stub. A
   whole-surface sweep written this way measured that single page 54 times and
   reported the console clean. `e2e/helpers/sweep.ts` now proves each route
   rendered its own page, with its own `h1` and no redirect stub, before any
