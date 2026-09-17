@@ -7,7 +7,6 @@ import { Icon } from "@/app/(admin)/_components/ui/Icon";
 import { Pagination } from "@/app/(admin)/_components/ui/DataTable";
 import { listFolders, listMedia, listTags, MEDIA_PAGE_SIZE, mediaUsage, toView } from "@/lib/admin/media";
 import { getCsrfToken, requirePageUser } from "@/lib/auth/current";
-import { can } from "@/lib/auth/rbac";
 
 export const metadata: Metadata = { title: "Media" };
 
@@ -34,8 +33,8 @@ function href(base: Record<string, string | number>, patch: Record<string, strin
 // alt text, folders and tags, all URL state. Uploads, details, replace,
 // usage and delete live in the client browser component.
 export default async function MediaPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
-  const { user } = await requirePageUser("/admin/media", { permission: "media:read" });
-  const canWrite = can(user.role, "media:write");
+  const { allows } = await requirePageUser("/admin/media", { permission: "media:read" });
+  const canWrite = allows("media:write");
   const raw = await searchParams;
   const first = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
   const q = querySchema.parse({ q: first(raw.q), folder: first(raw.folder), tag: first(raw.tag), view: first(raw.view), sort: first(raw.sort), page: first(raw.page) });

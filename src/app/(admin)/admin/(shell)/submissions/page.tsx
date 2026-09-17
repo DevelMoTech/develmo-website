@@ -7,7 +7,6 @@ import { tableHref } from "@/app/(admin)/_lib/table";
 import { getSetting } from "@/lib/admin/settings";
 import { fetchSubmissions, parseSubmissionParams, qualifierOptions, staffOptions } from "@/lib/admin/submissions";
 import { getCsrfToken, requirePageUser } from "@/lib/auth/current";
-import { can } from "@/lib/auth/rbac";
 
 export const metadata: Metadata = { title: "Submissions" };
 
@@ -15,12 +14,12 @@ export const metadata: Metadata = { title: "Submissions" };
 // filters, CSV export and, for settings holders, retention and the reply
 // template.
 export default async function SubmissionsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
-  const { user } = await requirePageUser("/admin/submissions", { permission: "submissions:read" });
+  const { user, allows } = await requirePageUser("/admin/submissions", { permission: "submissions:read" });
   const raw = await searchParams;
   const shown = parseSubmissionParams(raw);
   const effective = parseSubmissionParams({ ...raw, assignee: raw.assignee === "me" ? user.id : raw.assignee });
-  const canWrite = can(user.role, "submissions:write");
-  const canSettings = can(user.role, "settings:write");
+  const canWrite = allows("submissions:write");
+  const canSettings = allows("settings:write");
   const [csrf, { rows, total }, staff, options, retention, replyTemplate] = await Promise.all([
     getCsrfToken(),
     fetchSubmissions(effective, { spam: false, limit: effective.pageSize, offset: (effective.page - 1) * effective.pageSize }),

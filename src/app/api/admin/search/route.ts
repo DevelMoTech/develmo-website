@@ -3,7 +3,7 @@ import { z } from "zod";
 import { getDb } from "@/db";
 import { applications, jobs, posts, submissions, users } from "@/db/schema";
 import { adminRoute, apiError, apiOk } from "@/lib/auth/api";
-import { can } from "@/lib/auth/rbac";
+import { allowsFor } from "@/lib/auth/role-access";
 import { NAV_GROUPS } from "@/app/(admin)/_lib/nav";
 
 export const runtime = "nodejs";
@@ -20,12 +20,12 @@ export const GET = adminRoute({ auth: "required" }, async ({ req, auth }) => {
   if (!parsed.success) return apiOk({ hits: [] });
   const q = parsed.data;
   const needle = `%${q.replace(/[%_]/g, (m) => `\\${m}`)}%`;
-  const role = auth.user.role;
+  const allowed = await allowsFor(auth.user.role);
   const hits: SearchHit[] = [];
 
   for (const g of NAV_GROUPS) {
     for (const item of g.items) {
-      if (item.permission && !can(role, item.permission)) continue;
+      if (item.permission && !allowed(item.permission)) continue;
       if (item.label.toLowerCase().includes(q.toLowerCase()) || item.description.toLowerCase().includes(q.toLowerCase())) {
         hits.push({ group: "Pages", label: item.label, detail: item.description, href: item.href });
       }
@@ -33,7 +33,7 @@ export const GET = adminRoute({ auth: "required" }, async ({ req, auth }) => {
   }
 
   const db = getDb();
-  if (can(role, "content:read")) {
+  if (allowed("content:read")) {
     const rows = await db
       .select({ id: posts.id, title: posts.title, slug: posts.slug, status: posts.status })
       .from(posts)
@@ -49,7 +49,7 @@ export const GET = adminRoute({ auth: "required" }, async ({ req, auth }) => {
       .limit(5);
     for (const r of jobRows) hits.push({ group: "Jobs", label: r.title, detail: r.status, href: `/admin/jobs/${r.id}` });
   }
-  if (can(role, "submissions:read")) {
+  if (allowed("submissions:read")) {
     const appRows = await db
       .select({ id: applications.id, name: applications.name, email: applications.email, stage: applications.stage })
       .from(applications)
@@ -65,7 +65,7 @@ export const GET = adminRoute({ auth: "required" }, async ({ req, auth }) => {
       .limit(5);
     for (const r of rows) hits.push({ group: "Submissions", label: r.name || r.email, detail: r.company || r.email, href: `/admin/submissions/${r.id}` });
   }
-  if (can(role, "users:read")) {
+  if (allowed("users:read")) {
     const rows = await db
       .select({ name: users.name, email: users.email, role: users.role })
       .from(users)

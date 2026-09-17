@@ -46,6 +46,7 @@ export const SHELL_ROUTES = [
   "/admin/security/events",
   "/admin/security/headers",
   "/admin/security/authentication",
+  "/admin/security/roles",
   "/admin/security/limits",
   "/admin/security/sessions",
   "/admin/seo",

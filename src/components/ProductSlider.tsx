@@ -14,13 +14,6 @@ const SLIDES = [
     href: "/our-products/crowdiq",
   },
   {
-    name: "OmniRoad 2.0",
-    tag: "Road safety & traffic AI",
-    desc: "AI traffic monitoring that classifies vehicles, detects accidents and alerts authorities instantly, on the cameras you already have.",
-    video: "/hero-3.mp4",
-    href: "/our-products/omni-road",
-  },
-  {
     name: "PadelIQ",
     tag: "AI sports & padel analytics",
     desc: "Movement tracking, rally insights and performance metrics for players, teams and leagues, powering the Riyadh Padel Federation.",

@@ -5,7 +5,6 @@ import { PageHeader } from "@/app/(admin)/_components/ui/Basics";
 import { getSetting } from "@/lib/admin/settings";
 import { listRoutesWithOverrides } from "@/lib/admin/seo";
 import { getCsrfToken, requirePageUser } from "@/lib/auth/current";
-import { can } from "@/lib/auth/rbac";
 import { site } from "@/lib/site";
 
 export const metadata: Metadata = { title: "Structured data" };
@@ -14,10 +13,10 @@ export const metadata: Metadata = { title: "Structured data" };
 // emits, edited through its facts and validated before save, and the
 // FAQPage toggle per detail page.
 export default async function SchemaPage() {
-  const { user } = await requirePageUser("/admin/seo/schema", { permission: "seo:read" });
+  const { allows } = await requirePageUser("/admin/seo/schema", { permission: "seo:read" });
   const [csrf, facts, routes] = await Promise.all([getCsrfToken(), getSetting("org_schema"), listRoutesWithOverrides()]);
   const faqRoutes = routes.filter((r) => r.hasFaq).map((r) => ({ path: r.path, label: r.label, kind: r.kind, enabled: r.override?.faqEnabled !== false }));
-  const canWrite = can(user.role, "seo:write");
+  const canWrite = allows("seo:write");
   return (
     <>
       <PageHeader kicker="SEO" title="Structured data" description="The Organization JSON-LD on every public page, and FAQPage on the detail pages that have FAQs." />

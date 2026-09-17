@@ -28,3 +28,21 @@ export function ButtonLink({
 }: ComponentProps<typeof Link> & { variant?: Variant; size?: Size; block?: boolean }) {
   return <Link className={classes(variant, size, block, className)} {...rest} />;
 }
+
+// For somewhere off this site. A plain anchor, because the router has no
+// business prefetching another origin, and rel is set here so no caller can
+// forget it.
+export function ExternalButtonLink({
+  variant = "ghost",
+  size = "md",
+  block,
+  className,
+  children,
+  ...rest
+}: ComponentProps<"a"> & { variant?: Variant; size?: Size; block?: boolean }) {
+  return (
+    <a className={classes(variant, size, block, className)} target="_blank" rel="noopener noreferrer" {...rest}>
+      {children}
+    </a>
+  );
+}

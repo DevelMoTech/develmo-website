@@ -6,7 +6,6 @@ import { Badge, Card, PageHeader } from "@/app/(admin)/_components/ui/Basics";
 import { TableFrame } from "@/app/(admin)/_components/ui/TableFrame";
 import { listAudits } from "@/lib/admin/seo";
 import { getCsrfToken, requirePageUser } from "@/lib/auth/current";
-import { can } from "@/lib/auth/rbac";
 import { FINDING_KINDS, FINDING_LABELS } from "@/lib/seo/audit";
 
 export const metadata: Metadata = { title: "SEO audit" };
@@ -25,7 +24,7 @@ function Delta({ now, before }: { now: number; before: number | null }) {
 
 // Audit runs (brief §3.6): each crawl is stored so runs can be compared.
 export default async function AuditPage() {
-  const { user } = await requirePageUser("/admin/seo/audit", { permission: "seo:read" });
+  const { allows } = await requirePageUser("/admin/seo/audit", { permission: "seo:read" });
   const [csrf, runs] = await Promise.all([getCsrfToken(), listAudits(30)]);
   const running = runs.find((r) => r.status === "running") ?? null;
   const finished = runs.filter((r) => r.status === "finished");
@@ -34,7 +33,7 @@ export default async function AuditPage() {
     <>
       <PageHeader kicker="SEO" title="Audit" description="An on demand crawl of the public site: titles, descriptions, alt text, internal links, orphans, canonicals and H1s. Every run is kept, with the change from the run before." />
       <SeoNav />
-      <AuditRunner csrf={csrf} canWrite={can(user.role, "seo:write")} running={running} />
+      <AuditRunner csrf={csrf} canWrite={allows("seo:write")} running={running} />
       {runs.length === 0 ? (
         <Card title="No runs yet" description="Run the first audit to get a baseline." />
       ) : (

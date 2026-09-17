@@ -22,17 +22,41 @@ const why = [
   { icon: "enterprise", title: "Enterprise delivery", body: "Scalable, secure delivery trusted across 23+ countries." },
 ];
 
-// Real DevelMo client logos, lifted from the original develmo.com.
-const clients = [
+// Real DevelMo client logos, lifted from the original develmo.com. Each brand
+// belongs to exactly one row: both rows used to carry the same seven, so every
+// logo was on screen twice at once.
+const clientsTop = [
   { src: "/clients/kababji-removebg-preview.png", name: "Kababji" },
   { src: "/clients/kamaras_african_restaturant-removebg-preview.png", name: "Kamara's African Restaurant" },
   { src: "/clients/red_events-removebg-preview.png", name: "Red Events" },
   { src: "/clients/seatech_innovation-removebg-preview.png", name: "Seatech Innovation" },
+];
+const clientsBottom = [
   { src: "/clients/sibrossa_ltd-removebg-preview.png", name: "Sibrossa Ltd" },
   { src: "/clients/The_Mop-removebg-preview-non-crop-1.png", name: "The Mop" },
-  { src: "/clients/Untitled_design__1_-removebg-preview.png", name: "DevelMo client" },
+  { src: "/clients/Untitled_design__1_-removebg-preview.png", name: "Solveink" },
 ];
-const clientsRev = [...clients].reverse();
+
+// A CSS marquee looks seamless only while one pass of the row is at least as
+// wide as the screen, because the animation slides the track by exactly one
+// pass. Four brands at 306px (tile plus gap) is 1224px, narrower than any
+// desktop, so each row repeats until a pass clears an ultrawide display and
+// the track then carries two of those passes. Everything after the first pass
+// is scenery: it is hidden from screen readers and dropped when the visitor
+// has asked for no motion.
+const TILE_PX = 306;
+const PASS_MIN_PX = 3900;
+
+type ClientLogo = { src: string; name: string };
+
+function marqueeTrack(row: ClientLogo[]): { logo: ClientLogo; dup: boolean }[] {
+  const perPass = Math.max(1, Math.ceil(PASS_MIN_PX / (row.length * TILE_PX)));
+  const track: { logo: ClientLogo; dup: boolean }[] = [];
+  for (let copy = 0; copy < perPass * 2; copy += 1) {
+    for (const logo of row) track.push({ logo, dup: copy > 0 });
+  }
+  return track;
+}
 
 export default async function Home() {
   const locale = await getLocale();
@@ -50,26 +74,18 @@ export default async function Home() {
         <div className="container">
           <p className="clients-label">{tr("Trusted by teams and brands worldwide")}</p>
         </div>
-        <div className="clients-marquee">
-          <div className="clients-row">
-            {[...clients, ...clients].map((c, i) => (
-              <span className="client-tile" key={i}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={c.src} alt={c.name} className="client-logo" />
-              </span>
-            ))}
+        {[clientsTop, clientsBottom].map((row, r) => (
+          <div className="clients-marquee" key={r}>
+            <div className={r === 0 ? "clients-row" : "clients-row rev"}>
+              {marqueeTrack(row).map((c, i) => (
+                <span className="client-tile" key={i} data-dup={c.dup ? "true" : undefined} aria-hidden={c.dup || undefined}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={c.logo.src} alt={c.dup ? "" : c.logo.name} className="client-logo" />
+                </span>
+              ))}
+            </div>
           </div>
-        </div>
-        <div className="clients-marquee">
-          <div className="clients-row rev">
-            {[...clientsRev, ...clientsRev].map((c, i) => (
-              <span className="client-tile" key={i}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={c.src} alt={c.name} className="client-logo" />
-              </span>
-            ))}
-          </div>
-        </div>
+        ))}
       </section>
 
       {/* S01 · KEY FLAGSHIP PRODUCTS */}
@@ -80,7 +96,7 @@ export default async function Home() {
           <hr className="hr-tick" />
           <p className="lead">
             {tr(
-              "Four DevelMo products live in production today, not demos. Adopt them as they are, or have them tailored to your environment.",
+              "Every DevelMo product here runs in production today, not as a demo. Adopt it as it is, or have it tailored to your environment.",
             )}
           </p>
           <ProductSlider locale={locale} />

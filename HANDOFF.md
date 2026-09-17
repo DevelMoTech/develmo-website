@@ -34,7 +34,7 @@ to the owner to deploy. Today's task: <describe task>.
 
 DevelMo is a UK-registered AI / computer-vision software company (offices UK, Australia, Saudi Arabia, Pakistan; clients in 23+ countries). This site is its **marketing + lead-generation** website — the primary conversion goal is **"Book a Free Consultation"** (contact form enquiries).
 
-- **Products** (real, shipped): **CrowdIQ** (live AI video analytics — the flagship), **OmniRoad 2.0** (road-safety AI, coming soon), **PadelIQ** (sports/padel analytics, coming soon).
+- **Products** (real, shipped): **CrowdIQ** (live AI video analytics, the flagship) and **PadelIQ** (sports/padel analytics). **OmniRoad 2.0 was withdrawn** and is gone from the code, the copy, the four locales and the product list; `/our-products/omni-road` 301s to `/our-products` (both `next.config.ts` and `src/lib/seo/static-redirects.ts`), and `src/lib/repo/products.ts` filters the slug so a stale `content_entries` row in any environment cannot bring it back.
 - **6 service pillars / 21 services**, **10 industries**, blog/knowledge-base, careers, legal pages.
 - HQ: 20 Wenlock Road, London N1 7GU. Contact: `info@develmo.com`.
 - This was a migration from a developer-dependent WordPress site to a modern, CMS-ready platform. The original site's URL structure was mirrored on matching slugs so SEO migration needs ~no redirects.
@@ -179,7 +179,14 @@ Official palette (from DevelMo branding): main blue **`#0fb2f2`**, ink/dark **`#
 
 ### 5.6 Key components
 - **MegaNav** (`"use client"`, takes `locale`): full-width mega-menu (What We Do / Who We Help / Our Products / Who We Are panels) + Insights, utility strip (email, Knowledge Base, ThemeToggle, **Languages** switcher), mobile drawer, hamburger.
-- **HeroStage** (`"use client"`): full-bleed **background video slider** of DevelMo's own CV clips (`hero-1/2/3.mp4` = PadelIQ/CrowdIQ/OmniRoad), auto-advances, only-active-plays, dual CTAs.
+- **MegaNav** (`"use client"`) is the only site header; `SiteHeader.tsx` is
+  dead code. It is `position:sticky` and adds `.hide` (a `translateY(-100%)`)
+  while the visitor scrolls down past 160px, taking it off the moment they
+  scroll up, open any panel or drawer, move focus into it, or change route.
+  A transform on the header would make it the containing block for the fixed
+  mobile drawer, so the CSS drops both transform and transition while that
+  drawer is open.
+- **HeroStage** (`"use client"`): full-bleed **background video slider** of DevelMo's own CV clips (`hero-1.mp4` = PadelIQ, `hero-2.mp4` = CrowdIQ; `hero-3.mp4` is still in `/public` and on the performance watchlist but nothing renders it since OmniRoad was withdrawn), auto-advances, only-active-plays, dual CTAs.
 - **PageHero** / **CtaBand**: shared, **locale-aware** (translate their props). **StickyCta**: persistent "Let's Talk" tab/FAB. **ProductSlider** / **ProductCollage**: product video showcases. **ContactForm** (`"use client"`, localised): posts `/api/contact`, reads `?service/?industry/?intent` params for qualified CTAs.
 
 ---
@@ -346,12 +353,30 @@ evidence are in `docs/dashboard/PHASE-0-PLAN.md`.
 Four roles, checked server side on every page and every handler. The matrix
 lives in `src/lib/auth/rbac.ts` and is unit tested.
 
-| Role | Can |
+| Role | Can (as shipped) |
 |---|---|
 | Owner | Everything, including users, security and destructive actions |
 | Admin | Everything except transferring ownership |
 | Editor | Content, posts, jobs, media, submissions. No users, no security, no settings |
 | Viewer | Read only, everywhere |
+
+That table is the **default**, not the law. The fixed matrix in
+`src/lib/auth/rbac.ts` seeds an editable grid at **Security, Roles and
+access** (`role_access` setting): a tick box per console feature per role,
+saved by an Owner or Admin. `src/lib/auth/role-access.ts` resolves it and is
+the only thing that decides a permission at runtime, through
+`requirePageUser` (which now returns an `allows` predicate the page uses for
+its own controls), `adminRoute`, `visibleGroups`, global search and the
+submission digest. `can()` in `rbac.ts` is now only the shipped default and
+the grid's starting point; **do not use it to gate anything**. Four rules
+keep the console recoverable and honest: the Owner always holds everything
+and has no column; `settings:owner` and `owner:manage` are never grantable to
+another role; `users:manage`, `security:write` and `settings:write` are never
+grantable to Editor or Viewer, because that is a promotion and the role field
+is where a promotion belongs; and six administration permissions are held for
+Admin whatever the grid says. A permission added to the codebase later keeps
+its shipped answer until the grid is saved again, and a stored permission the
+code no longer has is dropped rather than failing the whole grid.
 
 Whether a second factor is required is a policy (the `auth_policy` setting,
 Security, Authentication, Owner only): off, optional (the default), required

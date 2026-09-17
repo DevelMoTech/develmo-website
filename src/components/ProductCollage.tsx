@@ -6,7 +6,6 @@ import { t } from "@/lib/i18n";
 // DevelMo's own product footage — a live collage in the Why section.
 const CLIPS = [
   { src: "/hero-2.mp4", label: "CrowdIQ · retail vision" },
-  { src: "/hero-3.mp4", label: "OmniRoad · traffic AI" },
   { src: "/hero-1.mp4", label: "PadelIQ · sports analytics" },
 ];
 

@@ -4,7 +4,6 @@ import { TranslationGrid } from "@/app/(admin)/_components/content/TranslationGr
 import { Card, PageHeader } from "@/app/(admin)/_components/ui/Basics";
 import { grid, LEAK_ROUTES, parseGridParams } from "@/lib/admin/translations";
 import { getCsrfToken, requirePageUser } from "@/lib/auth/current";
-import { can } from "@/lib/auth/rbac";
 import { localeLabels } from "@/lib/i18n";
 
 export const metadata: Metadata = { title: "Translations" };
@@ -14,10 +13,10 @@ export const metadata: Metadata = { title: "Translations" };
 // editing. Saved values go to the database; the files stay the seed and the
 // fallback and are never written to.
 export default async function TranslationsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
-  const { user } = await requirePageUser("/admin/translations", { permission: "content:read" });
+  const { allows } = await requirePageUser("/admin/translations", { permission: "content:read" });
   const params = parseGridParams(await searchParams);
   const [csrf, data] = await Promise.all([getCsrfToken(), grid(params)]);
-  const canWrite = can(user.role, "content:write");
+  const canWrite = allows("content:write");
 
   return (
     <>

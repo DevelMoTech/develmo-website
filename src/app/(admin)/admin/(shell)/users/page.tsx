@@ -2,11 +2,12 @@ import type { Metadata } from "next";
 import { AccessRequests, type AccessRequestRow } from "@/app/(admin)/_components/AccessRequests";
 import { InviteForm, InvitesTable, UsersTable, type InviteView, type UserView } from "@/app/(admin)/_components/UsersAdmin";
 import { Badge, Card, PageHeader } from "@/app/(admin)/_components/ui/Basics";
+import { ExternalButtonLink } from "@/app/(admin)/_components/ui/Button";
 import { getCsrfToken, requirePageUser } from "@/lib/auth/current";
 import { listAccessRequests } from "@/lib/auth/access-requests";
 import { listInvites, listUsers } from "@/lib/auth/flows";
 import { getSetting } from "@/lib/admin/settings";
-import { can, invitableRoles } from "@/lib/auth/rbac";
+import { invitableRoles } from "@/lib/auth/rbac";
 
 export const metadata: Metadata = { title: "Users" };
 
@@ -15,11 +16,11 @@ function fmt(d: Date | null): string {
 }
 
 export default async function UsersPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
-  const { user } = await requirePageUser("/admin/users", { permission: "users:read" });
+  const { user, allows } = await requirePageUser("/admin/users", { permission: "users:read" });
   const sp = await searchParams;
   const q = (sp.q ?? "").trim().toLowerCase().slice(0, 160);
   const csrf = await getCsrfToken();
-  const canManage = can(user.role, "users:manage");
+  const canManage = allows("users:manage");
   const [users, invites, accessRequests, notify] = await Promise.all([listUsers(), canManage ? listInvites() : Promise.resolve([]), listAccessRequests(), getSetting("access_requests")]);
 
   const userRows: UserView[] = users
@@ -58,7 +59,16 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
         kicker="Administration"
         title="Users"
         description="Staff accounts, roles and invitations. Access is invite only."
-        actions={<Badge tone="muted">{users.length} account{users.length === 1 ? "" : "s"}</Badge>}
+        actions={
+          <>
+            <Badge tone="muted">{users.length} account{users.length === 1 ? "" : "s"}</Badge>
+            {/* The mailboxes themselves live at Hostinger, not here. Staff
+                land on this page to add someone and then need the inbox. */}
+            <ExternalButtonLink href="https://mail.hostinger.com/auth/login" size="sm">
+              Open Hostinger webmail
+            </ExternalButtonLink>
+          </>
+        }
       />
       <Card title="Staff accounts" description={q ? `Filtered by “${q}”. ` : "Owners cannot be demoted or removed by anyone else, and at least one Owner always exists."}>
         {q && <p><a className="adm-link" href="/admin/users">Show all accounts</a></p>}

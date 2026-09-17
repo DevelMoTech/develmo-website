@@ -106,7 +106,7 @@ npm run db:seed
 ```
 
 This copies what is already in `src/lib` into the database: the six service
-pillars and 21 services, the ten industries, the three products, the about
+pillars and 21 services, the ten industries, the products, the about
 page, the company facts, offices, stats and technologies, and the three blog
 posts. It is **idempotent**: running it twice does not create duplicates and does not
 overwrite anything you have since edited in the console. Pass `-- --force` to
@@ -280,6 +280,9 @@ that commit gives you the site exactly as it was before this work started.
 | Remove someone who has left | `/admin/users`, set status to suspended, then revoke their sessions at `/admin/security/sessions` |
 | Someone lost their phone | `/admin/users`, reset their second factor. They enrol again at next sign-in |
 | Require, allow or switch off the second factor for everyone | `/admin/security/authentication`. Off, optional (the default), required for Owner and Admin, or required for everyone. Owner only; applies to the next sign in at once |
+| Decide which console features a role may use | `/admin/security/roles`. A tick box per feature per role. Owner is not listed because it always holds everything, which is what lets a mistake here be undone. Some boxes are fixed: the owner only settings and transferring ownership stay with the Owner, inviting people and changing security or settings stay with Admin, and six rows are held for Admin so nobody can untick their own way out of Users and Security. Ticking an edit also grants the matching view. A change applies on the next page load |
+| Open the Hostinger mailboxes | `/admin/users`, "Open Hostinger webmail". The console never holds mailbox credentials; the button is a link to `mail.hostinger.com` |
+| Finish retiring OmniRoad on a deployed database | `npm run content:retire-omniroad` (add `-- --dry-run` to look first). The site already hides the product, because `src/lib/repo/products.ts` filters the slug; this deletes the leftover `content_entries` row and rewrites the four About sentences that named it. Safe to run twice |
 | Read enquiries | `/admin/submissions` |
 | An enquiry did not arrive by email | `/admin/submissions/<id>`, Delivery, Replay. The row was stored before delivery was attempted, so nothing is ever lost |
 | Publish a post later | `/admin/posts/<id>`, Publishing, set a date. Vercel Cron publishes it |

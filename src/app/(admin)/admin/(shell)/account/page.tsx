@@ -8,7 +8,6 @@ import { Tabs } from "@/app/(admin)/_components/ui/Tabs";
 import { getCsrfToken, requirePageUser } from "@/lib/auth/current";
 import { recoveryCodesRemaining } from "@/lib/auth/flows";
 import { getMfaPolicy, mfaRequiredUnder, mustEnrol } from "@/lib/auth/policy";
-import { can } from "@/lib/auth/rbac";
 import { listActiveSessions } from "@/lib/auth/session";
 import { describeUserAgent } from "@/lib/auth/ua";
 
@@ -19,7 +18,7 @@ function fmt(d: Date): string {
 }
 
 export default async function AccountPage({ searchParams }: { searchParams: Promise<{ required?: string; email?: string; tab?: string }> }) {
-  const { user, session } = await requirePageUser("/admin/account", { allowMustChangePassword: true, allowMfaUnenrolled: true });
+  const { user, session, allows } = await requirePageUser("/admin/account", { allowMustChangePassword: true, allowMfaUnenrolled: true });
   const sp = await searchParams;
   const csrf = await getCsrfToken();
   const sessions = await listActiveSessions(user.id);
@@ -64,7 +63,7 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
                   <Card title="Email address" description="Your sign in address. Confirmed by a link sent to the new address.">
                     <ChangeEmailForm csrf={csrf} email={user.email} />
                   </Card>
-                  {can(user.role, "submissions:read") && (
+                  {allows("submissions:read") && (
                     <Card title="Submission digest" description="Email you about new enquiries: as they arrive, once a day, or not at all.">
                       <DigestForm csrf={csrf} initial={user.digest} />
                     </Card>

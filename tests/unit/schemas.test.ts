@@ -202,6 +202,7 @@ const CASES: Case[] = [
   { name: "turnstileSchema", schema: security.turnstileSchema, ok: { enabled: true, siteKey: "0x4AAA-BBBB_cccc" }, bad: { enabled: true, siteKey: "has spaces" } },
   { name: "securityRetentionSchema", schema: security.securityRetentionSchema, ok: { eventDays: 180 }, bad: { eventDays: -1 } },
   { name: "mfaPolicySchema", schema: security.mfaPolicySchema, ok: { mfa: "admins" }, bad: { mfa: "always" } },
+  { name: "roleAccessSchema", schema: security.roleAccessSchema, ok: { roles: { admin: ["users:read"], editor: [], viewer: [] } }, bad: { roles: { admin: [], editor: [] } } },
   { name: "sessionRevokeSchema", schema: security.sessionRevokeSchema, ok: { sessionId: UUID }, bad: { sessionId: UUID.slice(1) } },
   { name: "userActionSchema", schema: security.userActionSchema, ok: { userId: UUID, action: "logout_all" }, bad: { userId: UUID, action: "delete_everything" } },
   { name: "headersCheckSchema", schema: security.headersCheckSchema, ok: { path: "/what-we-do" }, bad: { path: "/what-we-do?x=1" } },

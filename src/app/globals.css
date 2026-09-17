@@ -237,7 +237,18 @@
    drawer to a ~59px sliver. The later `backdrop-filter:none` could not undo it:
    the minifier keeps only the -webkit- prefixed reset, which does not clear the
    standard property. */
-.mega{position:sticky;top:0;z-index:60;background:rgba(255,255,255,.96);border-bottom:1px solid var(--line)}
+/* Sticky, and out of the way on the way down: MegaNav adds .hide while the
+   visitor is scrolling down the page and takes it off the moment they scroll
+   back up, or open a menu, or move focus into the header. */
+.mega{position:sticky;top:0;z-index:60;background:rgba(255,255,255,.96);border-bottom:1px solid var(--line);transition:transform .3s ease}
+.mega.hide{transform:translateY(-100%)}
+/* A transform on the header makes it the containing block for anything fixed
+   inside it, and the drawer is fixed. While the drawer is open the header
+   must carry no transform at all, not even a transition winding one back. */
+.mega:has(.mega-drawer.open){transform:none;transition:none}
+/* A fragment link must not land under the header. */
+html{scroll-padding-top:calc(var(--mega-h) + 12px)}
+@media(prefers-reduced-motion:reduce){.mega{transition:none}}
 .mega-in{display:flex;align-items:center;gap:16px;height:72px}
 .mega-nav{display:flex;align-items:center;gap:2px;margin-left:6px}
 .mega-spacer{flex:1}
@@ -267,6 +278,20 @@
 .mega-prod .plogo{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:800;font-family:var(--font-head);flex:none}
 .mega-prod b{display:block;color:var(--ink);font-size:13.5px;line-height:1.35}
 .mega-prod small{display:block;color:var(--muted);font-size:11.5px;line-height:1.42;margin-top:1px}
+/* Products panel: a still per product, because two products in a four column
+   grid of one-line links left most of the panel empty. */
+.mega-prodcards{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+.mega-prodcard{display:flex;flex-direction:column;gap:11px;padding:11px;border:1px solid var(--line);border-radius:12px;background:#fff;text-decoration:none;transition:background .16s,border-color .16s,transform .16s,box-shadow .16s}
+.mega-prodcard:hover{background:var(--tint);border-color:#CFE6F5;transform:translateY(-2px);box-shadow:var(--shadow-layer)}
+.mpc-shot{position:relative;display:block;aspect-ratio:16/9;border-radius:9px;overflow:hidden;background:var(--tint2)}
+.mpc-shot img{display:block;width:100%;height:100%;object-fit:cover;transition:transform .3s ease}
+.mega-prodcard:hover .mpc-shot img{transform:scale(1.04)}
+.mpc-initial{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--font-head);font-weight:800;font-size:38px}
+.mpc-body{display:flex;gap:11px;align-items:flex-start}
+.mpc-body .plogo{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:800;font-family:var(--font-head);flex:none}
+.mpc-body b{display:block;color:var(--ink);font-size:14px;line-height:1.35}
+.mpc-body small{display:block;color:var(--muted);font-size:11.5px;line-height:1.42;margin-top:2px}
+@media(prefers-reduced-motion:reduce){.mega-prodcard:hover{transform:none}.mega-prodcard:hover .mpc-shot img{transform:none}}
 .mega-foot{margin-top:13px;padding-top:12px;border-top:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
 .mega-alllink{display:inline-flex;color:var(--accent);font-weight:700;font-size:13.5px;text-decoration:none}
 .mega-region{position:relative}
@@ -579,20 +604,28 @@
    ============================================================ */
 .clients{padding:54px 0 50px;background:var(--tint2);border-bottom:1px solid var(--line)}
 .clients-label{text-align:center;font-family:var(--font-body);font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:32px}
-.clients-marquee{overflow:hidden;-webkit-mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent);mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent);padding:11px 0}
-.clients-row{display:flex;gap:22px;align-items:center;width:max-content;animation:marq 46s linear infinite}
-.clients-row.rev{animation:marq-rev 54s linear infinite}
+/* direction:ltr because the logos are marks, not text: in Arabic and Urdu an
+   inherited rtl reverses the flex row and the track scrolls itself empty. */
+.clients-marquee{direction:ltr;overflow:hidden;-webkit-mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent);mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent);padding:12px 0}
+/* Slow, in opposite directions. The track holds two passes of the row and
+   slides by exactly one, so the seam never shows; the home page works out how
+   many times to repeat each row from the 280px tile plus its 26px margin.
+   The spacing is a margin rather than a gap on purpose: a gap sits only
+   between tiles, so half the track would be one gap short of a whole period
+   and the loop would jump sideways every time it came round. */
+.clients-row{display:flex;align-items:center;width:max-content;animation:marq 92s linear infinite}
+.clients-row.rev{animation:marq-rev 104s linear infinite}
 .clients-marquee:hover .clients-row{animation-play-state:paused}
-.client-tile{flex:none;display:flex;align-items:center;justify-content:center;width:210px;height:104px;padding:20px 30px;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 10px 24px -20px rgba(2,28,38,.4);transition:border-color .2s,box-shadow .2s,transform .2s}
+.client-tile{flex:none;display:flex;align-items:center;justify-content:center;inline-size:clamp(200px,22vw,280px);block-size:clamp(116px,12vw,142px);margin-inline-end:clamp(14px,1.6vw,26px);padding:clamp(14px,1.5vw,22px) clamp(18px,2vw,28px);background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 10px 24px -20px rgba(2,28,38,.4);transition:border-color .2s,box-shadow .2s,transform .2s}
 .client-tile:hover{border-color:rgba(61,242,224,.55);box-shadow:var(--shadow-layer);transform:translateY(-3px)}
-.client-logo{max-height:64px;max-width:150px;width:auto;height:auto;object-fit:contain}
+.client-logo{max-block-size:clamp(76px,8vw,96px);max-inline-size:clamp(156px,18vw,224px);inline-size:auto;block-size:auto;object-fit:contain}
 @keyframes marq{to{transform:translateX(-50%)}}
 @keyframes marq-rev{from{transform:translateX(-50%)}to{transform:translateX(0)}}
 .cq-show{position:relative;border-radius:13px;overflow:hidden}
 .cq-show img{display:block;width:100%;height:auto}
 .cq-tag{position:absolute;top:14px;left:14px;z-index:3;display:inline-flex;align-items:center;gap:8px;background:rgba(2,28,38,.72);border:1px solid rgba(61,242,224,.4);color:#fff;font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:11px;font-weight:600;letter-spacing:.04em;padding:6px 11px;border-radius:999px}
 .cq-tag .sdot.live{width:8px;height:8px;border-radius:50%;background:var(--teal);box-shadow:0 0 0 0 rgba(61,242,224,.6);animation:pulse 1.6s infinite}
-@media(prefers-reduced-motion:reduce){.clients-row.rev{animation:none}.cq-tag .sdot.live{animation:none}}
+@media(prefers-reduced-motion:reduce){.cq-tag .sdot.live{animation:none}}
 
 .imgcard-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;margin-top:46px}
 .imgcard{position:relative;display:block;min-height:300px;border-radius:14px;overflow:hidden;background-size:cover;background-position:center;border:1px solid var(--line);box-shadow:var(--shadow-layer);transition:transform .2s,box-shadow .2s}
@@ -607,13 +640,15 @@
 .imgcard-link{color:var(--teal);font-weight:700;font-size:13.5px;font-family:var(--font-head);display:inline-flex;gap:6px;align-items:center;transition:gap .2s}
 .imgcard:hover .imgcard-link{gap:11px}
 @media(max-width:880px){.imgcard-grid{grid-template-columns:1fr}.imgcard,.imgcard-body{min-height:230px}}
-@media(prefers-reduced-motion:reduce){.clients-row{animation:none;flex-wrap:wrap;justify-content:center}.imgcard:hover{transform:none}}
+/* No motion: the rows stop and wrap, and the repeats that only exist to make
+   the loop seamless are removed, so each logo is shown exactly once. */
+@media(prefers-reduced-motion:reduce){.clients-marquee{overflow:visible;-webkit-mask-image:none;mask-image:none}.clients-row{animation:none;flex-wrap:wrap;justify-content:center;width:auto}.client-tile[data-dup="true"]{display:none}.imgcard:hover{transform:none}}
 
 /* ============================================================
    DEVELMO PREMIUM ENHANCEMENT — header utility strip, editorial
    nav, featured mega-rail, statement pre-footer, enterprise footer.
    ============================================================ */
-.mega{background:#fff;backdrop-filter:none;-webkit-backdrop-filter:none;border-bottom:1px solid var(--line);transition:box-shadow .22s ease,border-color .22s ease}
+.mega{background:#fff;backdrop-filter:none;-webkit-backdrop-filter:none;border-bottom:1px solid var(--line);transition:box-shadow .22s ease,border-color .22s ease,transform .3s ease}
 .mega.scrolled{box-shadow:0 12px 34px -24px rgba(2,28,38,.45);border-bottom-color:transparent}
 @media(prefers-reduced-motion:reduce){.mega{transition:none}}
 
@@ -655,6 +690,9 @@
 
 .mega-panelwrap.has-feature{display:grid;grid-template-columns:272px 1fr;gap:36px;align-items:start}
 .mega-panelwrap.has-feature .mega-eyebrow{grid-column:1 / -1}
+/* The footer links belong to the whole panel, not to the narrow left column
+   they would otherwise be trapped in. */
+.mega-panelwrap.has-feature .mega-foot{grid-column:1 / -1}
 .mega-feature{display:flex;flex-direction:column;gap:9px;padding-right:34px;border-right:1px solid var(--line)}
 .mega-bighead{font-family:var(--font-head);font-weight:800;font-size:27px;line-height:1.05;letter-spacing:-.02em;color:var(--ink);margin:0}
 .mega-blurb{color:var(--muted);font-size:13px;line-height:1.5;margin:0;max-width:32ch}
@@ -699,7 +737,7 @@
 .foot-cta .btn-ghost-d:hover{border-color:var(--teal);color:var(--teal)}
 @media(max-width:880px){.foot-cta-in{grid-template-columns:1fr;gap:24px;padding:46px var(--gutter)}.foot-cta-h{font-size:28px}}
 
-.foot-grid{grid-template-columns:1.5fr 1fr 1fr 1fr 1fr;gap:36px}
+.foot-grid{grid-template-columns:1.6fr 1fr 1fr 1fr;gap:36px}
 .footer h5{display:flex;align-items:center;gap:9px;letter-spacing:.08em}
 .footer h5::before{content:"";width:14px;height:2px;background:var(--teal);flex:none}
 .foot-viewall{color:var(--teal);font-weight:700;font-size:13px;font-family:var(--font-head)}
@@ -750,7 +788,11 @@
 .pc-item.pc-main{grid-column:1 / -1;aspect-ratio:16/8}
 .pc-item video{width:100%;height:100%;object-fit:cover;display:block}
 .pc-tag{position:absolute;bottom:8px;left:8px;font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:10px;font-weight:600;letter-spacing:.03em;color:#fff;background:rgba(2,28,38,.72);border:1px solid rgba(61,242,224,.35);padding:4px 8px;border-radius:6px}
-@media(max-width:560px){.client-tile{width:172px;height:92px;padding:16px 22px}}
+/* Two clips fill one row on their own; the wide lead tile is for three or
+   more, where it would otherwise leave a half empty row underneath. */
+.pcollage:has(.pc-item:nth-child(2):last-child) .pc-item.pc-main{grid-column:auto;aspect-ratio:16/10}
+/* Phones: still the largest logo the tile can hold, not a smaller one. */
+@media(max-width:560px){.client-tile{inline-size:196px;block-size:112px;margin-inline-end:14px;padding:12px 16px}.client-logo{max-block-size:80px;max-inline-size:160px}}
 
 /* flagship product video carousel */
 .pslider{margin-top:46px;border-radius:18px;overflow:hidden;border:1px solid var(--lineD);box-shadow:var(--shadow-layer);background:var(--ink)}
@@ -764,7 +806,8 @@
 .ps-name{font-family:var(--font-head);font-size:48px;font-weight:900;color:#fff;letter-spacing:-.02em;line-height:1.02;margin:6px 0 0}
 .ps-tag{color:var(--teal);font-weight:700;font-size:15px;font-family:var(--font-head);margin:12px 0 0}
 .ps-desc{color:#C2CCE4;font-size:16px;line-height:1.6;margin:14px 0 24px;max-width:44ch}
-.ps-nav{display:grid;grid-template-columns:repeat(3,1fr);background:var(--ink2);border-top:1px solid var(--lineD)}
+/* One column per slide, whatever the slide count is. */
+.ps-nav{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;background:var(--ink2);border-top:1px solid var(--lineD)}
 .ps-tab{text-align:left;padding:18px 24px;background:none;border:0;border-right:1px solid var(--lineD);cursor:pointer;transition:background .2s;position:relative}
 .ps-tab:last-child{border-right:0}
 .ps-tab:hover{background:rgba(255,255,255,.04)}
@@ -774,7 +817,7 @@
 .ps-tab.on b{color:var(--teal)}
 .ps-tab span{display:block;font-size:12.5px;color:#8E99B8;margin-top:3px}
 @media(prefers-reduced-motion:reduce){.ps-vid{transition:none}.ps-badge .sdot.live{animation:none}}
-@media(max-width:760px){.ps-content{padding:34px}.ps-name{font-size:32px}.ps-stage{min-height:380px}.ps-nav{grid-template-columns:1fr}.ps-tab{border-right:0;border-bottom:1px solid var(--lineD)}.ps-tab:last-child{border-bottom:0}}
+@media(max-width:760px){.ps-content{padding:34px}.ps-name{font-size:32px}.ps-stage{min-height:380px}.ps-nav{grid-auto-flow:row;grid-auto-columns:auto}.ps-tab{border-right:0;border-bottom:1px solid var(--lineD)}.ps-tab:last-child{border-bottom:0}}
 
 /* ===== theme toggle ===== */
 .theme-toggle{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:8px;border:1px solid var(--lineD);background:rgba(255,255,255,.05);color:#AEBAD6;cursor:pointer;transition:.18s;flex:none;padding:0}
@@ -867,6 +910,10 @@
 [data-theme="dark"] .card:hover,
 [data-theme="dark"] .mega-prod:hover,
 [data-theme="dark"] .ind:hover{border-color:rgba(61,242,224,.4)}
+[data-theme="dark"] .mega-prodcard{background:#0f232d;border-color:var(--line)}
+[data-theme="dark"] .mega-prodcard:hover{background:#16323f;border-color:rgba(61,242,224,.4)}
+[data-theme="dark"] .mpc-body b{color:#E6ECF6}
+[data-theme="dark"] .mpc-shot{background:#0a1820}
 [data-theme="dark"] .mega-prod:hover .iconchip{background:#16323f}
 /* KEEP client logo tiles white so the dark client logos stay visible (pops on dark) */
 [data-theme="dark"] .client-tile{background:#fff}

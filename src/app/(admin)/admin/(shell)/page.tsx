@@ -13,7 +13,6 @@ import {
   vitalsStats,
 } from "@/app/(admin)/_lib/stats";
 import { requirePageUser } from "@/lib/auth/current";
-import { can, type Permission } from "@/lib/auth/rbac";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
@@ -60,10 +59,8 @@ function fmtMs(v: number | null): string {
 }
 
 export default async function AdminHome({ searchParams }: { searchParams: Promise<{ denied?: string }> }) {
-  const { user } = await requirePageUser("/admin");
+  const { user, allows: allowed } = await requirePageUser("/admin");
   const sp = await searchParams;
-  const role = user.role;
-  const allowed = (p: Permission) => can(role, p);
 
   const [subs, postsS, jobsS, vitals, security, health, activity] = await Promise.all([
     allowed("submissions:read") ? submissionStats() : null,

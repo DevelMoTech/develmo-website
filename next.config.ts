@@ -42,6 +42,9 @@ const redirects = [
   { source: "/contact-us", destination: "/contact-develmo", permanent: true },
   // PadelIQ slug was renamed from the legacy rpf-padel-league.
   { source: "/our-products/rpf-padel-league", destination: "/our-products/padeliq", permanent: true },
+  // OmniRoad 2.0 was withdrawn; the page was indexed, so send it to the list
+  // rather than letting a live URL start answering 404.
+  { source: "/our-products/omni-road", destination: "/our-products", permanent: true },
 ];
 
 // Long-lived, immutable caching for static media in /public. These assets are
@@ -55,6 +58,11 @@ const nextConfig: NextConfig = {
   // found". Set NEXT_DIST_DIR=.next-build to run a verification build alongside a
   // live dev server. Unset (Vercel, plain `npm run build`) keeps the default.
   distDir: process.env.NEXT_DIST_DIR ?? ".next",
+  // Same reason as distDir above: a verification build running beside a live
+  // `next dev` must not type check that server's generated route types, which
+  // it rewrites while the build is reading them. tsconfig.build.json is this
+  // config with those files left out. An ordinary build is untouched.
+  ...(process.env.NEXT_DIST_DIR ? { typescript: { tsconfigPath: "tsconfig.build.json" } } : {}),
   poweredByHeader: false,
   // Every page resolves its metadata from the SEO overrides cache (Phase 7).
   // Next streams metadata into <body> for browsers when generateMetadata is

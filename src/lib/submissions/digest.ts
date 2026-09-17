@@ -1,7 +1,8 @@
 import { and, eq, gt, sql } from "drizzle-orm";
 import { getDb } from "@/db";
 import { submissions, users } from "@/db/schema";
-import { can } from "@/lib/auth/rbac";
+import { ROLES } from "@/lib/auth/rbac";
+import { allows } from "@/lib/auth/role-access";
 import { sendEmail, siteUrl } from "@/lib/email";
 import { qaAddress, type SubmissionRow } from "./delivery";
 
@@ -30,7 +31,11 @@ async function recipients(mode: DigestMode) {
     .select({ id: users.id, email: users.email, name: users.name, role: users.role, digestLastSentAt: users.digestLastSentAt })
     .from(users)
     .where(and(eq(users.status, "active"), eq(users.digest, mode)));
-  return rows.filter((u) => can(u.role, "submissions:read"));
+  // The grid at Security, Roles and access decides this, not the shipped
+  // matrix: a role that can no longer open the inbox is not mailed about it.
+  const readers = new Set<string>();
+  for (const role of ROLES) if (await allows(role, "submissions:read")) readers.add(role);
+  return rows.filter((u) => readers.has(u.role));
 }
 
 export async function notifyInstantDigest(row: SubmissionRow): Promise<{ attempted: number; sent: number }> {

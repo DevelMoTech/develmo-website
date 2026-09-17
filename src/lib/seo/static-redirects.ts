@@ -15,4 +15,5 @@ export const STATIC_REDIRECTS: { source: string; destination: string; permanent:
   { source: "/contact", destination: "/contact-develmo", permanent: true },
   { source: "/contact-us", destination: "/contact-develmo", permanent: true },
   { source: "/our-products/rpf-padel-league", destination: "/our-products/padeliq", permanent: true },
+  { source: "/our-products/omni-road", destination: "/our-products", permanent: true },
 ];

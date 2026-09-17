@@ -10,7 +10,6 @@ import { Icon } from "@/app/(admin)/_components/ui/Icon";
 import { jobEditorValue } from "@/app/(admin)/_lib/job-editor-data";
 import { loadJob } from "@/lib/admin/jobs";
 import { getCsrfToken, requirePageUser } from "@/lib/auth/current";
-import { can } from "@/lib/auth/rbac";
 import { buildJobPosting, validateJobPosting } from "@/lib/jobposting";
 import { markdownToHtml } from "@/lib/markdown";
 import { toPublicJob } from "@/lib/repo/jobs";
@@ -22,7 +21,7 @@ const STATUS_TONE = { open: "ok", draft: "muted", paused: "warn", closed: "dange
 
 export default async function EditJobPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { user } = await requirePageUser(`/admin/jobs/${id}`, { permission: "content:read" });
+  const { allows } = await requirePageUser(`/admin/jobs/${id}`, { permission: "content:read" });
   if (!UUID.test(id)) notFound();
   const row = await loadJob(id);
   if (!row) notFound();
@@ -59,7 +58,7 @@ export default async function EditJobPage({ params }: { params: Promise<{ id: st
           </>
         }
       />
-      <JobEditor csrf={csrf} jobId={id} initial={jobEditorValue(row)} savedSlug={row.slug} canWrite={can(user.role, "content:write")} applicationCount={applicationCount} report={report} />
+      <JobEditor csrf={csrf} jobId={id} initial={jobEditorValue(row)} savedSlug={row.slug} canWrite={allows("content:write")} applicationCount={applicationCount} report={report} />
     </>
   );
 }

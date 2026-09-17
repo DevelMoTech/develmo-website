@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { parseCidr } from "@/lib/security/cidr";
+import { PERMISSIONS, can, type Permission } from "@/lib/auth/rbac";
 
 // Client-safe zod schemas for the security manager (no server imports).
 
@@ -85,6 +86,46 @@ export type MfaPolicy = (typeof MFA_POLICIES)[number];
 export const mfaPolicySchema = z.object({ mfa: z.enum(MFA_POLICIES) });
 export type MfaPolicyInput = z.infer<typeof mfaPolicySchema>;
 export const DEFAULT_MFA_POLICY: MfaPolicyInput = { mfa: "optional" };
+
+// Which console features each role may use (Security, Roles and access).
+// Owner is absent on purpose: it always holds everything, so a mistake in the
+// grid is always undoable. The shipped matrix in rbac.ts is the default.
+// Unknown names are dropped rather than rejected. A permission that is
+// renamed or retired in the code would otherwise make the whole saved grid
+// fail to parse, and every role would silently revert to the shipped matrix.
+const permissionList = z
+  .array(z.string())
+  .transform((list) => list.filter((p): p is Permission => (PERMISSIONS as readonly string[]).includes(p)));
+
+export const roleAccessSchema = z.object({
+  roles: z.object({ admin: permissionList, editor: permissionList, viewer: permissionList }),
+  // Which permissions the grid covered when it was saved. A permission added
+  // to the console afterwards is not in this list, so it keeps the answer the
+  // console ships with instead of counting as unticked.
+  known: permissionList.default([...PERMISSIONS]),
+});
+export type RoleAccess = z.infer<typeof roleAccessSchema>;
+
+// Never grantable to anyone but the Owner: the owner only settings and
+// transferring ownership. A tick box must not become a way around that.
+export const OWNER_ONLY_PERMISSIONS: Permission[] = ["settings:owner", "owner:manage"];
+
+// Held for Admin whatever the grid says. Without these an Admin could untick
+// their own way out of Users and Security and then have no way back in.
+export const ADMIN_FLOOR_PERMISSIONS: Permission[] = ["users:read", "users:manage", "security:read", "security:write", "settings:read", "settings:write"];
+
+// Not handed to an Editor or a Viewer by a tick box. Each of these makes the
+// holder an administrator in all but name, and promoting somebody is what the
+// role field is for; doing it through this grid would hide it.
+export const ADMIN_ONLY_PERMISSIONS: Permission[] = ["users:manage", "security:write", "settings:write"];
+export const DEFAULT_ROLE_ACCESS: RoleAccess = {
+  roles: {
+    admin: PERMISSIONS.filter((p) => can("admin", p)),
+    editor: PERMISSIONS.filter((p) => can("editor", p)),
+    viewer: PERMISSIONS.filter((p) => can("viewer", p)),
+  },
+  known: [...PERMISSIONS],
+};
 
 export const securityRetentionSchema = z.object({
   // Days to keep security events before the cron deletes them. 0 keeps them

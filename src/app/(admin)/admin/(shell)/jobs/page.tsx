@@ -9,7 +9,6 @@ import { DataTable, TableFilters, type Column } from "@/app/(admin)/_components/
 import { Icon } from "@/app/(admin)/_components/ui/Icon";
 import { parseTableParams } from "@/app/(admin)/_lib/table";
 import { requirePageUser } from "@/lib/auth/current";
-import { can } from "@/lib/auth/rbac";
 import { EMPLOYMENT_TYPES, labelFor, officeByCode } from "@/lib/jobs-shared";
 
 export const metadata: Metadata = { title: "Jobs" };
@@ -30,8 +29,8 @@ function fmt(d: Date | null): string {
 }
 
 export default async function JobsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
-  const { user } = await requirePageUser("/admin/jobs", { permission: "content:read" });
-  const canWrite = can(user.role, "content:write");
+  const { allows } = await requirePageUser("/admin/jobs", { permission: "content:read" });
+  const canWrite = allows("content:write");
   const params = parseTableParams(await searchParams, TABLE);
   const clauses: SQL[] = [];
   if (params.filters.status && ["draft", "open", "paused", "closed"].includes(params.filters.status)) clauses.push(eq(jobs.status, params.filters.status as Row["status"]));

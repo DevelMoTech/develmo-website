@@ -276,7 +276,7 @@ test("Editor and Viewer are refused by every endpoint in this module, with valid
       expect(((await res.json()) as { error: string }).error, `${role} calling ${e.path}`).toBe("forbidden");
     }
     // The pages send them away too.
-    for (const page of ["/admin/security", "/admin/security/authentication", "/admin/security/events", "/admin/security/access", "/admin/security/limits", "/admin/security/sessions", "/admin/security/headers", "/admin/security/dependencies"]) {
+    for (const page of ["/admin/security", "/admin/security/authentication", "/admin/security/roles", "/admin/security/events", "/admin/security/access", "/admin/security/limits", "/admin/security/sessions", "/admin/security/headers", "/admin/security/dependencies"]) {
       await who.page.goto(page);
       await expect(who.page).toHaveURL(/\/admin\?denied=/);
     }
@@ -349,7 +349,7 @@ test("the headers panel reads the live policy back and grades it, and every secu
   const { report: r } = (await report.json()) as { report: { grade: string; checks: { header: string; status: string }[] } };
   console.log(`HEADERS EVIDENCE: grade ${r.grade}; ${r.checks.map((c) => `${c.header}=${c.status}`).join(", ")}`);
 
-  const pages = ["/admin/security", "/admin/security/authentication", "/admin/security/events", "/admin/security/access", "/admin/security/limits", "/admin/security/sessions", "/admin/security/headers", "/admin/security/dependencies"];
+  const pages = ["/admin/security", "/admin/security/authentication", "/admin/security/roles", "/admin/security/events", "/admin/security/access", "/admin/security/limits", "/admin/security/sessions", "/admin/security/headers", "/admin/security/dependencies"];
   for (const width of [360, 768, 1280]) {
     await admin.page.setViewportSize({ width, height: 900 });
     for (const path of pages) {

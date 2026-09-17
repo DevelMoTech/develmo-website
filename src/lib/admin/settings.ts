@@ -5,7 +5,7 @@ import { settings } from "@/db/schema";
 import { DEFAULT_ORGANIZATION_FACTS } from "@/lib/seo/organization";
 import { DEFAULT_ROBOTS_BODY } from "@/lib/seo/robots";
 import { organizationFactsSchema, robotsBodySchema } from "@/lib/schemas/seo";
-import { DEFAULT_MFA_POLICY, DEFAULT_SECURITY_RETENTION, DEFAULT_TURNSTILE, mfaPolicySchema, securityRetentionSchema, turnstileSchema } from "@/lib/schemas/security";
+import { DEFAULT_MFA_POLICY, DEFAULT_ROLE_ACCESS, DEFAULT_SECURITY_RETENTION, DEFAULT_TURNSTILE, mfaPolicySchema, roleAccessSchema, securityRetentionSchema, turnstileSchema } from "@/lib/schemas/security";
 import { DEFAULT_MEDIA_SETTINGS, mediaSettingsSchema } from "@/lib/schemas/performance";
 import { DEFAULT_NAVIGATION, navigationSchema } from "@/lib/schemas/content";
 import { accessNotifySchema, type AccessNotifyInput } from "@/lib/schemas/access";
@@ -51,6 +51,7 @@ const SCHEMAS = {
   navigation: navigationSchema,
   access_requests: accessNotifySchema,
   auth_policy: mfaPolicySchema,
+  role_access: roleAccessSchema,
 } as const;
 
 // Who is told about a new access request. The default is the address the
@@ -69,6 +70,7 @@ const DEFAULTS: { [K in keyof typeof SCHEMAS]: z.infer<(typeof SCHEMAS)[K]> } = 
   navigation: DEFAULT_NAVIGATION,
   access_requests: DEFAULT_ACCESS_NOTIFY,
   auth_policy: DEFAULT_MFA_POLICY,
+  role_access: DEFAULT_ROLE_ACCESS,
 };
 export type SettingKey = keyof typeof SCHEMAS;
 

@@ -57,9 +57,9 @@ const pricing = [
   {
     name: "Business",
     tag: "For SMEs & retail chains",
-    amount: "$299",
+    amount: "$99",
     per: "/month",
-    was: "$1,999",
+    was: "$199",
     featured: true,
     cta: { label: "Request a demo", href: "/contact-develmo" },
     features: [

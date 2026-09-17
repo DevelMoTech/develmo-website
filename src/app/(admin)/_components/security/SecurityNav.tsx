@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 const TABS = [
   { href: "/admin/security", label: "Overview" },
   { href: "/admin/security/authentication", label: "Authentication" },
+  { href: "/admin/security/roles", label: "Roles and access" },
   { href: "/admin/security/events", label: "Events" },
   { href: "/admin/security/access", label: "Access control" },
   { href: "/admin/security/limits", label: "Rate limits" },

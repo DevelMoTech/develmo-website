@@ -1,4 +1,5 @@
-import { can, type Permission, type Role } from "@/lib/auth/rbac";
+import type { Permission } from "@/lib/auth/rbac";
+import type { Allows } from "@/lib/auth/role-access";
 import type { IconName } from "../_components/ui/Icon";
 
 // Single source of truth for the console's navigation, breadcrumbs, global
@@ -55,10 +56,13 @@ export const NAV_GROUPS: NavGroup[] = [
   },
 ];
 
-export function visibleGroups(role: Role): NavGroup[] {
+// The sidebar for one person, from the permissions their role holds right
+// now rather than from the shipped matrix, so unticking a feature also takes
+// it out of the navigation.
+export function visibleGroups(allows: Allows): NavGroup[] {
   return NAV_GROUPS.map((g) => ({
     ...g,
-    items: g.items.filter((i) => !i.permission || can(role, i.permission)),
+    items: g.items.filter((i) => !i.permission || allows(i.permission)),
   })).filter((g) => g.items.length > 0);
 }
 

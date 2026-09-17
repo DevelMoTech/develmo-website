@@ -10,7 +10,6 @@ import { loadApplication } from "@/lib/admin/applications";
 import { getTemplate } from "@/lib/admin/templates";
 import { markReadForApplication } from "@/lib/admin/submissions";
 import { getClientIpHash, getCsrfToken, requirePageUser } from "@/lib/auth/current";
-import { can } from "@/lib/auth/rbac";
 
 export const metadata: Metadata = { title: "Application" };
 
@@ -22,14 +21,14 @@ function when(d: Date): string {
 
 export default async function ApplicationPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { user } = await requirePageUser(`/admin/applications/${id}`, { permission: "submissions:read" });
+  const { user, allows } = await requirePageUser(`/admin/applications/${id}`, { permission: "submissions:read" });
   if (!UUID.test(id)) notFound();
   const loaded = await loadApplication(id);
   if (!loaded) notFound();
   const { app, job, notes, events } = loaded;
   const [csrf, staff, rejectionTemplate] = await Promise.all([getCsrfToken(), staffOptions(), getTemplate("application_rejection")]);
-  const canWrite = can(user.role, "submissions:write");
-  const canDelete = can(user.role, "users:manage");
+  const canWrite = allows("submissions:write");
+  const canDelete = allows("users:manage");
   // The inbox mirror of this application is read once the pipeline opens it.
   if (canWrite) await markReadForApplication(id, { user, ipHash: await getClientIpHash() });
   const assignee = staff.find((s) => s.id === app.assigneeId)?.name ?? null;

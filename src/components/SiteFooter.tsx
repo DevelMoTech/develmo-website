@@ -2,9 +2,8 @@ import Link from "next/link";
 import { site } from "@/lib/site";
 import { SocialIcon } from "@/components/icons";
 import { Button } from "@/components/ui";
-import { industries } from "@/lib/industries";
 import { products } from "@/lib/products";
-import { t, loc } from "@/lib/i18n";
+import { t } from "@/lib/i18n";
 
 const whatWeDo = [
   { label: "Digital Transformation", href: "/what-we-do" },
@@ -90,17 +89,6 @@ export function SiteFooter({ locale }: { locale: string }) {
               {whatWeDo.map((l) => (
                 <li key={l.label}>
                   <Link href={l.href}>{tr(l.label)}</Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div>
-            <h5>{tr("Who We Help")}</h5>
-            <ul>
-              {industries.map((i) => (
-                <li key={i.slug}>
-                  <Link href={`/who-we-help/${i.slug}`}>{loc(i, locale, "industries", i.slug).name}</Link>
                 </li>
               ))}
             </ul>

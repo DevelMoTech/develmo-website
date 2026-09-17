@@ -9,7 +9,6 @@ import { ButtonLink } from "@/app/(admin)/_components/ui/Button";
 import { changedCount, diffLines } from "@/app/(admin)/_lib/diff";
 import { listRevisions, loadPost, type PostSnapshot } from "@/lib/admin/posts";
 import { getCsrfToken, requirePageUser } from "@/lib/auth/current";
-import { can } from "@/lib/auth/rbac";
 import { TRANSLATION_LOCALES } from "@/lib/schemas/post";
 
 export const metadata: Metadata = { title: "Revisions" };
@@ -63,13 +62,13 @@ function when(d: Date): string {
 // Diff between any two revisions, one click restore (brief §3.3).
 export default async function RevisionsPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ a?: string; b?: string }> }) {
   const { id } = await params;
-  const { user } = await requirePageUser(`/admin/posts/${id}/revisions`, { permission: "content:read" });
+  const { allows } = await requirePageUser(`/admin/posts/${id}/revisions`, { permission: "content:read" });
   if (!UUID.test(id)) notFound();
   const post = await loadPost(id);
   if (!post) notFound();
   const revisions = await listRevisions(id);
   const csrf = await getCsrfToken();
-  const canWrite = can(user.role, "content:write");
+  const canWrite = allows("content:write");
   const sp = await searchParams;
   const byId = new Map(revisions.map((r) => [r.id, r]));
   // Default: the newest against the one before it.

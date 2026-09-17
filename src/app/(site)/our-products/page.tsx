@@ -10,7 +10,7 @@ import { pageMeta } from "@/lib/meta";
 export const generateMetadata = (): Promise<Metadata> => pageMeta({
   title: "Our Products",
   description:
-    "DevelMo products: CrowdIQ video analytics, OmniRoad 2.0 road safety, and PadelIQ sports and padel analytics.",
+    "DevelMo products: CrowdIQ video analytics and PadelIQ padel and sports analytics.",
   path: "/our-products",
 });
 

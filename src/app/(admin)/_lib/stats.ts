@@ -18,7 +18,7 @@ import {
   translations,
   webVitals,
 } from "@/db/schema";
-import { can, type Role } from "@/lib/auth/rbac";
+import type { Allows } from "@/lib/auth/role-access";
 import type { NotificationItem } from "../_components/shell/Notifications";
 
 // Every number on the dashboard comes from these queries (brief §3.2: real
@@ -182,11 +182,11 @@ export async function recentActivity(limit = 8) {
     .limit(limit);
 }
 
-export async function recentNotifications(role: Role): Promise<{ items: NotificationItem[]; unread: number }> {
+export async function recentNotifications(allows: Allows): Promise<{ items: NotificationItem[]; unread: number }> {
   const db = getDb();
   const since = new Date(Date.now() - DAY_MS);
   const items: (NotificationItem & { at: Date })[] = [];
-  if (can(role, "submissions:read")) {
+  if (allows("submissions:read")) {
     const rows = await db
       .select({ id: submissions.id, name: submissions.name, email: submissions.email, kind: submissions.kind, createdAt: submissions.createdAt })
       .from(submissions)
@@ -195,7 +195,7 @@ export async function recentNotifications(role: Role): Promise<{ items: Notifica
       .limit(5);
     for (const r of rows) items.push({ id: `s-${r.id}`, at: r.createdAt, title: `New ${r.kind}`, detail: r.name || r.email, when: relativeTime(r.createdAt), href: `/admin/submissions/${r.id}` });
   }
-  if (can(role, "security:read")) {
+  if (allows("security:read")) {
     const rows = await db
       .select({ id: securityEvents.id, type: securityEvents.type, email: securityEvents.email, createdAt: securityEvents.createdAt })
       .from(securityEvents)

@@ -6,7 +6,7 @@ import { recentNotifications } from "@/app/(admin)/_lib/stats";
 import { visibleGroups } from "@/app/(admin)/_lib/nav";
 import { resolveTheme } from "@/app/(admin)/_lib/theme-server";
 import { getCsrfToken, getCurrentSessionIfReachable } from "@/lib/auth/current";
-import { can } from "@/lib/auth/rbac";
+import { allowsFor } from "@/lib/auth/role-access";
 import { unreadSubmissionCount } from "@/lib/submissions/digest";
 
 // Wraps every authenticated console page in the shell. When there is no
@@ -16,15 +16,16 @@ export default async function ShellLayout({ children }: Readonly<{ children: Rea
   const auth = await getCurrentSessionIfReachable();
   if (!auth || auth.session.mfaPending) return <>{children}</>;
   const { user } = auth;
+  const allows = await allowsFor(user.role);
   const [csrf, { theme }, notifications, unread] = await Promise.all([
     getCsrfToken(),
     resolveTheme(),
-    recentNotifications(user.role),
-    can(user.role, "submissions:read") ? unreadSubmissionCount().catch(() => 0) : Promise.resolve(0),
+    recentNotifications(allows),
+    allows("submissions:read") ? unreadSubmissionCount().catch(() => 0) : Promise.resolve(0),
   ]);
   return (
     <Shell
-      groups={visibleGroups(user.role)}
+      groups={visibleGroups(allows)}
       badges={{ "/admin/submissions": unread }}
       tools={
         <>

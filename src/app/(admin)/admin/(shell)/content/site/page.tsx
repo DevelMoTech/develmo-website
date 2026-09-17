@@ -4,7 +4,6 @@ import { SiteFactsEditor } from "@/app/(admin)/_components/content/SiteFactsEdit
 import { PageHeader } from "@/app/(admin)/_components/ui/Basics";
 import { getSiteFacts, getStats, getTech } from "@/lib/admin/content";
 import { getCsrfToken, requirePageUser } from "@/lib/auth/current";
-import { can } from "@/lib/auth/rbac";
 import type { SiteFactsInput } from "@/lib/schemas/content";
 
 export const metadata: Metadata = { title: "Company facts" };
@@ -12,7 +11,7 @@ export const metadata: Metadata = { title: "Company facts" };
 // The company facts, offices, stats, tech and social links from
 // src/lib/site.ts (brief §3.9).
 export default async function SiteContentPage() {
-  const { user } = await requirePageUser("/admin/content/site", { permission: "content:read" });
+  const { allows } = await requirePageUser("/admin/content/site", { permission: "content:read" });
   const [csrf, facts, stats, tech] = await Promise.all([getCsrfToken(), getSiteFacts(), getStats(), getTech()]);
   return (
     <>
@@ -24,7 +23,7 @@ export default async function SiteContentPage() {
         tech={tech.value}
         fromFile={facts.fromFile}
         csrf={csrf}
-        canWrite={can(user.role, "content:write")}
+        canWrite={allows("content:write")}
       />
     </>
   );

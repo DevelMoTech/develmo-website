@@ -4,7 +4,6 @@ import { SeoNav } from "@/app/(admin)/_components/seo/SeoNav";
 import { Card, PageHeader } from "@/app/(admin)/_components/ui/Basics";
 import { listRedirects } from "@/lib/admin/seo";
 import { getCsrfToken, requirePageUser } from "@/lib/auth/current";
-import { can } from "@/lib/auth/rbac";
 import { STATIC_REDIRECTS } from "@/lib/seo/static-redirects";
 import { REDIRECT_TTL_MS } from "@/lib/seo/redirect-map";
 
@@ -13,13 +12,13 @@ export const metadata: Metadata = { title: "Redirects" };
 // Redirects manager (brief §3.6). Database rules are served by the proxy
 // from an in-memory map; the static next.config.ts rules run first.
 export default async function RedirectsPage() {
-  const { user } = await requirePageUser("/admin/seo/redirects", { permission: "seo:read" });
+  const { allows } = await requirePageUser("/admin/seo/redirects", { permission: "seo:read" });
   const [csrf, rows] = await Promise.all([getCsrfToken(), listRedirects()]);
   return (
     <>
       <PageHeader kicker="SEO" title="Redirects" description={`Served by the proxy from memory and refreshed at most every ${REDIRECT_TTL_MS / 1000} seconds, so a rule is live everywhere within that window and no visitor request waits on the database.`} />
       <SeoNav />
-      <RedirectsManager rows={rows} csrf={csrf} canWrite={can(user.role, "seo:write")} />
+      <RedirectsManager rows={rows} csrf={csrf} canWrite={allows("seo:write")} />
       <Card title="Static redirects" description="Deployed with the code in next.config.ts. They run before the proxy, so a database rule cannot use one of these sources." className="adm-card">
         <div className="adm-table-wrap" tabIndex={0}>
           <table className="adm-table adm-table-plain">

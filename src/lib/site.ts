@@ -38,7 +38,7 @@ export const site = {
 export const stats = [
   { value: "23+", label: "Countries served" },
   { value: "90-95%", label: "CrowdIQ detection accuracy" },
-  { value: "4", label: "Products shipped" },
+  { value: "2", label: "Products shipped" },
   { value: "Live", label: "Real-time on-camera inference" },
 ];
 

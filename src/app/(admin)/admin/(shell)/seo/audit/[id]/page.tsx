@@ -7,7 +7,6 @@ import { Badge, Card, PageHeader } from "@/app/(admin)/_components/ui/Basics";
 import { TableFrame } from "@/app/(admin)/_components/ui/TableFrame";
 import { compareFindings, loadAudit, loadFindings, previousAudit, type FindingRow } from "@/lib/admin/seo";
 import { getCsrfToken, requirePageUser } from "@/lib/auth/current";
-import { can } from "@/lib/auth/rbac";
 import { FINDING_KINDS, FINDING_LABELS, type FindingKind } from "@/lib/seo/audit";
 import { site } from "@/lib/site";
 
@@ -43,7 +42,7 @@ function detailText(f: FindingRow): string {
 
 export default async function AuditRunPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const { id } = await params;
-  const { user } = await requirePageUser(`/admin/seo/audit/${id}`, { permission: "seo:read" });
+  const { allows } = await requirePageUser(`/admin/seo/audit/${id}`, { permission: "seo:read" });
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const run = await loadAudit(id);
   if (!run) notFound();
@@ -74,7 +73,7 @@ export default async function AuditRunPage({ params, searchParams }: { params: P
         actions={<Link className="adm-btn adm-btn-ghost adm-btn-sm" href="/admin/seo/audit">All runs</Link>}
       />
       <SeoNav />
-      {run.status === "running" && <AuditRunner csrf={csrf} canWrite={can(user.role, "seo:write")} running={run} />}
+      {run.status === "running" && <AuditRunner csrf={csrf} canWrite={allows("seo:write")} running={run} />}
       {run.status === "finished" && (
         <>
           <Card

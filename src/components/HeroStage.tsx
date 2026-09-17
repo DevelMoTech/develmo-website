@@ -10,7 +10,6 @@ import { DEFAULT_MEDIA_SETTINGS, type MediaSettings } from "@/lib/schemas/perfor
 const CLIPS = [
   { src: "/hero-1.mp4", poster: "/hero-1.jpg", name: "PadelIQ", tag: "AI sports & padel analytics" },
   { src: "/hero-2.mp4", poster: "/hero-2.jpg", name: "CrowdIQ", tag: "Retail & venue intelligence" },
-  { src: "/hero-3.mp4", poster: "/hero-3.jpg", name: "OmniRoad 2.0", tag: "Traffic & road-safety AI" },
 ];
 const INTERVAL = 7000;
 

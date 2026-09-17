@@ -8,7 +8,6 @@ import { ButtonLink } from "@/app/(admin)/_components/ui/Button";
 import { getSetting } from "@/lib/admin/settings";
 import { loadSubmission, markRead, staffOptions } from "@/lib/admin/submissions";
 import { getClientIpHash, getCsrfToken, requirePageUser } from "@/lib/auth/current";
-import { can } from "@/lib/auth/rbac";
 import { mailtoFor, renderReply } from "@/lib/submissions/reply";
 
 export const metadata: Metadata = { title: "Submission" };
@@ -21,9 +20,9 @@ function when(d: Date | null): string {
 
 export default async function SubmissionPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { user } = await requirePageUser(`/admin/submissions/${id}`, { permission: "submissions:read" });
+  const { user, allows } = await requirePageUser(`/admin/submissions/${id}`, { permission: "submissions:read" });
   if (!UUID.test(id)) notFound();
-  const canWrite = can(user.role, "submissions:write");
+  const canWrite = allows("submissions:write");
   // Opening a new enquiry marks it read, for staff who can act on it.
   if (canWrite) await markRead(id, { user, ipHash: await getClientIpHash() });
   const loaded = await loadSubmission(id);
@@ -151,7 +150,7 @@ export default async function SubmissionPage({ params }: { params: Promise<{ id:
           notes={notes}
           staff={staff}
           canWrite={canWrite}
-          canDelete={can(user.role, "users:manage")}
+          canDelete={allows("users:manage")}
         />
       </div>
     </>

@@ -6,7 +6,6 @@ import { ButtonLink } from "@/app/(admin)/_components/ui/Button";
 import { Icon } from "@/app/(admin)/_components/ui/Icon";
 import { editorValueFor, existingCategories, isLive, revisionCount } from "@/app/(admin)/_lib/post-editor-data";
 import { getCsrfToken, requirePageUser } from "@/lib/auth/current";
-import { can } from "@/lib/auth/rbac";
 import { POST_BASE_PATH } from "@/lib/repo/posts";
 
 export const metadata: Metadata = { title: "Edit post" };
@@ -16,7 +15,7 @@ const STATUS_TONE = { published: "ok", draft: "muted", scheduled: "info", archiv
 
 export default async function EditPostPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { user } = await requirePageUser(`/admin/posts/${id}`, { permission: "content:read" });
+  const { allows } = await requirePageUser(`/admin/posts/${id}`, { permission: "content:read" });
   if (!UUID.test(id)) notFound();
   const loaded = await editorValueFor(id);
   if (!loaded) notFound();
@@ -57,7 +56,7 @@ export default async function EditPostPage({ params }: { params: Promise<{ id: s
         savedSlug={row.slug}
         savedType={row.type}
         savedStatus={row.status}
-        canWrite={can(user.role, "content:write")}
+        canWrite={allows("content:write")}
         updatedAt={row.updatedAt.toISOString().slice(0, 16).replace("T", " ") + " UTC"}
         revisionCount={revisions}
       />

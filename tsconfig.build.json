@@ -1,0 +1,17 @@
+{
+  "//": "Used only by a verification build, the one started with NEXT_DIST_DIR set so it can run beside a live `next dev`. It is the normal config with the dev server's generated route types left out: that server rewrites them while the build is reading them, which has produced a half written file and a type error that had nothing to do with the code. Plain `npm run build` and the deploy keep using tsconfig.json.",
+  "extends": "./tsconfig.json",
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    "**/*.mts",
+    ".next-build/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    ".next",
+    ".next-fallback",
+    ".scratch"
+  ]
+}

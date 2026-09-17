@@ -37,22 +37,6 @@ export const products: Product[] = [
     faqs: [{"q": "Do I need to buy new cameras or special hardware?", "a": "No. CrowdIQ is plug-and-play and works with the surveillance cameras you already run, connecting over RTSP, ONVIF, HTTP, or local webcam sources. Auto-detection validates each feed during setup."}, {"q": "What happens to my video footage and visitor data?", "a": "CrowdIQ is built privacy-first and runs on-premise with offline capability, so footage and analytics stay inside your own environment rather than being sent to an external cloud service."}, {"q": "How accurate is the detection, and does it handle local clothing?", "a": "Person detection runs at 90 to 95 percent accuracy in real conditions. Because the models are custom-trained rather than generic, they perform on culturally specific clothing, including traditional attire, where off-the-shelf APIs often struggle."}],
   },
   {
-    slug: "omni-road",
-    title: "OmniRoad 2.0",
-    tagline: "AI traffic intelligence for safer roads and smarter cities.",
-    summary: "OmniRoad 2.0 is an AI traffic system that connects to existing cameras, detects and classifies vehicles in real time, and flags accidents the moment they happen. It turns ordinary road footage into live situational awareness and actionable insight for traffic and safety teams.",
-    initial: "O",
-    bg: "var(--blue)",
-    fg: "#04243a",
-    badge: "live",
-    features: ["Real-time object detection and tracking that identifies and follows vehicles such as cars, buses, trucks and motorcycles as they move through each scene", "Vehicle classification that separates traffic by type, so road usage can be analysed in detail rather than counted as one undifferentiated flow", "Real-time accident detection that spots collisions the moment they occur and evaluates their severity", "Immediate alerts, including instant sound notifications, that put relevant authorities on the incident without delay", "Versatile camera integration that connects over multiple protocols and works with virtually any existing camera setup for fast deployment", "Detailed road usage analytics that surface flow patterns, congestion and movement trends to guide better traffic decisions", "Actionable data outputs designed to feed traffic management and emergency response, not just dashboards", "Built to scale across single junctions, transport hubs and city-wide camera networks alike"],
-    forWho: "OmniRoad 2.0 is built for traffic management authorities, road safety teams, smart city programmes and operators of transport hubs such as airports, bus stations and train stations, anyone responsible for keeping vehicles moving and responding fast when something goes wrong.",
-    href: "/our-products/omni-road",
-    intro: "OmniRoad 2.0 plugs into the cameras you already have and applies computer vision to every frame, recognising cars, trucks, buses and motorcycles as they move through the scene. It tracks how roads are actually used, identifies accidents in real time and assesses their severity, then pushes that intelligence to the people who need to act. The result is a single AI layer over your road network that improves both traffic flow and safety, without ripping out existing infrastructure.",
-    howItWorks: [{"title": "Connect your cameras", "body": "OmniRoad 2.0 links to your existing cameras over multiple protocols, so there is no need to replace hardware. If you can stream the feed, the system can analyse it."}, {"title": "Detect and classify in real time", "body": "Computer vision runs on every frame, detecting and tracking vehicles and classifying them by type, cars, trucks, buses and motorcycles, to build an accurate picture of how each road is being used."}, {"title": "Spot accidents and assess severity", "body": "The system continuously watches for collisions, identifies accidents as they happen and evaluates how serious each one is, turning raw footage into a clear incident signal."}, {"title": "Alert and act", "body": "When an incident is detected, OmniRoad 2.0 issues immediate alerts, including instant sound notifications, so the relevant authorities and emergency services can respond without losing time."}, {"title": "Analyse and improve", "body": "Vehicle and incident data feeds into detailed road usage analysis, giving teams the insight to ease congestion, improve flow and make roads measurably safer over time."}],
-    faqs: [{"q": "Do we need to install new cameras to use OmniRoad 2.0?", "a": "No. OmniRoad 2.0 is designed to integrate with virtually any existing camera setup and connects over multiple protocols, so in most cases you can deploy it on the infrastructure you already have."}, {"q": "What can OmniRoad 2.0 detect?", "a": "It detects and tracks vehicles in real time, classifies them by type such as cars, trucks, buses and motorcycles, and identifies accidents as they happen while assessing their severity."}, {"q": "What happens when an accident is detected?", "a": "The system raises immediate alerts, including instant sound notifications, so the relevant authorities and emergency services are informed straight away and can respond faster."}],
-  },
-  {
     slug: "padeliq",
     title: "PadelIQ",
     tagline: "Structured matches, real rankings, and AI that reads the game.",
@@ -74,3 +58,14 @@ export const products: Product[] = [
 export function getProduct(slug: string) {
   return products.find((p) => p.slug === slug);
 }
+
+// Artwork for the products mega menu, one still per product. It lives here
+// rather than on the product record because the record is editable content:
+// the database copy is what the site renders and it carries no image field,
+// so a product edited in the console would lose its picture. A product with
+// no entry here falls back to its initial on its brand colour, which is what
+// the menu showed before it had pictures at all.
+export const productArt: Record<string, { src: string; width: number; height: number }> = {
+  crowdiq: { src: "/crowdiq/showcase.jpg", width: 1200, height: 676 },
+  padeliq: { src: "/hero-1.jpg", width: 1280, height: 720 },
+};

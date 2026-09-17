@@ -8,6 +8,7 @@ import { revokeAllSessions } from "@/lib/auth/session";
 import type { SessionWithUser } from "@/lib/auth/session";
 import { mfaRequired, type Role } from "@/lib/auth/rbac";
 import { bustMfaPolicy } from "@/lib/auth/policy";
+import { allows, bustRoleAccess, resolvePermissions } from "@/lib/auth/role-access";
 import { getSetting, setSetting } from "@/lib/admin/settings";
 import { ACCESS_TAG } from "@/lib/security/access";
 import { cidrSize, parseCidr, parseIp } from "@/lib/security/cidr";
@@ -16,7 +17,7 @@ import { runDependencyAudit } from "@/lib/security/deps";
 import type { Advisory, DependencySummary } from "@/lib/security/deps-types";
 import { gradeHeaders, type HeaderReport } from "@/lib/security/headers-grade";
 import { trustedOrigin } from "@/lib/seo/origin";
-import { EDITABLE_LIMITS, type AccessRuleInput, type EditableLimit, type MfaPolicyInput, type RateLimitInput, type TurnstileInput, type UserActionInput } from "@/lib/schemas/security";
+import { EDITABLE_LIMITS, type AccessRuleInput, type EditableLimit, type MfaPolicyInput, type RateLimitInput, type RoleAccess, type TurnstileInput, type UserActionInput } from "@/lib/schemas/security";
 import { parseTableParams, type TableParams } from "@/app/(admin)/_lib/table";
 
 // Write and read side of the security manager (brief §3.7). Owner and Admin
@@ -323,6 +324,29 @@ export async function saveMfaPolicy(input: MfaPolicyInput, actor: Actor): Promis
   await setSetting("auth_policy", input, actor.user.id);
   await audit({ actorId: actor.user.id, actorEmail: actor.user.email, action: "security.mfa_policy.update", entityType: "settings", entityId: "auth_policy", before, after: input, ipHash: actor.ipHash });
   bustMfaPolicy();
+}
+
+// Which console features each role may use. Whatever the form sends is put
+// through the same rules the server reads it back under, so the stored grid
+// can never claim something the console would then ignore: the owner only
+// permissions are dropped and the Admin floor is added back.
+export async function saveRoleAccess(input: RoleAccess, actor: Actor): Promise<{ ok: true; saved: RoleAccess } | { ok: false; error: string }> {
+  // Changing configuration, not just reading the security module.
+  if (!(await allows(actor.user.role, "settings:write"))) return { ok: false, error: "forbidden" };
+  const saved: RoleAccess = {
+    roles: {
+      admin: [...resolvePermissions(input, "admin")],
+      editor: [...resolvePermissions(input, "editor")],
+      viewer: [...resolvePermissions(input, "viewer")],
+    },
+    // What the grid that was submitted actually covered.
+    known: input.known,
+  };
+  const before = await getSetting("role_access");
+  await setSetting("role_access", saved, actor.user.id);
+  await audit({ actorId: actor.user.id, actorEmail: actor.user.email, action: "security.role_access.update", entityType: "settings", entityId: "role_access", before, after: saved, ipHash: actor.ipHash });
+  bustRoleAccess();
+  return { ok: true, saved };
 }
 
 export type SecondFactorStats = {

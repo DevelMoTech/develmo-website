@@ -7,7 +7,7 @@ import { Button } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { pillars, servicesByPillar } from "@/lib/services";
 import { industries } from "@/lib/industries";
-import { products } from "@/lib/products";
+import { products, productArt } from "@/lib/products";
 import { site } from "@/lib/site";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { t, loc, locales, localeLabels } from "@/lib/i18n";
@@ -41,13 +41,39 @@ export function MegaNav({ locale }: { locale: string }) {
   const [acc, setAcc] = useState<string | null>(null);
   const closeTimer = useRef<number | null>(null);
   const [scrolled, setScrolled] = useState(false);
+  const [retreated, setRetreated] = useState(false);
+  // The products panel carries a still per product. The panel is in the DOM
+  // on every page, only hidden, so mounting the pictures up front would cost
+  // every visitor a couple of hundred kilobytes they may never look at.
+  const [productsSeen, setProductsSeen] = useState(false);
   const pathname = usePathname();
 
+  // Sticky, but out of the way: the header slides up while the visitor is
+  // reading down the page and comes back the moment they scroll up. The six
+  // pixel guard ignores trackpad jitter and the rubber band at either end,
+  // and nothing hides until the header is well clear of the top.
   useEffect(() => {
-    const f = () => setScrolled(window.scrollY > 8);
-    f();
-    window.addEventListener("scroll", f, { passive: true });
-    return () => window.removeEventListener("scroll", f);
+    let last = window.scrollY;
+    let frame = 0;
+    const read = () => {
+      frame = 0;
+      const y = Math.max(0, window.scrollY);
+      setScrolled(y > 8);
+      const delta = y - last;
+      if (Math.abs(delta) < 8) return;
+      last = y;
+      setRetreated(delta > 0 && y > 160);
+    };
+    const onScroll = () => {
+      if (frame) return;
+      frame = window.requestAnimationFrame(read);
+    };
+    read();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      if (frame) window.cancelAnimationFrame(frame);
+    };
   }, []);
 
   // Navigation is client-side, so the header never remounts. Collapse every
@@ -58,6 +84,7 @@ export function MegaNav({ locale }: { locale: string }) {
     setMobileOpen(false);
     setRegionOpen(false);
     setAcc(null);
+    setRetreated(false);
   }, [pathname]);
 
   // The drawer is a full-screen overlay; don't let the page scroll behind it.
@@ -96,6 +123,7 @@ export function MegaNav({ locale }: { locale: string }) {
   function enter(key: TopKey) {
     if (closeTimer.current) window.clearTimeout(closeTimer.current);
     setOpen(key);
+    if (key === "our-products") setProductsSeen(true);
   }
   function leave() {
     if (closeTimer.current) window.clearTimeout(closeTimer.current);
@@ -117,8 +145,12 @@ export function MegaNav({ locale }: { locale: string }) {
     window.location.reload();
   }
 
+  // Never hide a header someone is using: an open panel, the drawer, the
+  // language menu, or focus arriving inside it all bring it straight back.
+  const hidden = retreated && !open && !mobileOpen && !regionOpen;
+
   return (
-    <header className={`mega${scrolled ? " scrolled" : ""}`}>
+    <header className={`mega${scrolled ? " scrolled" : ""}${hidden ? " hide" : ""}`} onFocusCapture={() => setRetreated(false)}>
       <div className="mega-util">
         <div className="container mega-util-in">
           <span className="mu-mono">
@@ -263,7 +295,14 @@ export function MegaNav({ locale }: { locale: string }) {
           </div>
 
           {/* OUR PRODUCTS */}
-          <div className={`mega-top${open === "our-products" ? " open" : ""}`} onMouseEnter={() => enter("our-products")} onMouseLeave={leave}>
+          {/* onFocusCapture as well as hover: a keyboard user opens this
+              panel with :focus-within, which no mouse handler would see. */}
+          <div
+            className={`mega-top${open === "our-products" ? " open" : ""}`}
+            onMouseEnter={() => enter("our-products")}
+            onMouseLeave={leave}
+            onFocusCapture={() => setProductsSeen(true)}
+          >
             <Link className="mega-toplink" href="/our-products" onClick={go}>
               {tr("Our Products")} <span className="mega-caret" />
             </Link>
@@ -277,25 +316,33 @@ export function MegaNav({ locale }: { locale: string }) {
                   <p className="mega-blurb">
                     {tr("Production-grade AI products you can adopt as-is or have tailored to your environment.")}
                   </p>
-                  <span className="mono-label">// FEATURED</span>
-                  <Link className="mega-feature-card" href="/our-products/crowdiq" onClick={go}>
-                    <span className="mff-eyebrow">{tr("Flagship product")}</span>
-                    <b>CrowdIQ</b>
-                    <small>{tr("Live visitor detection, dwell and heatmaps on the cameras you already have.")}</small>
-                    <span className="mega-feature-go">{tr("Explore CrowdIQ")} →</span>
-                  </Link>
                 </div>
-                <div className="mega-grid cols4">
+                <div className="mega-prodcards">
                   {products.map((p) => {
                     const pl = loc(p, locale, "products", p.slug);
+                    const art = productArt[p.slug];
                     return (
-                      <Link className="mega-prod" href={p.href} key={p.slug} onClick={go}>
-                        <span className="plogo" style={{ background: p.bg, color: p.fg }}>
-                          {p.initial}
+                      <Link className="mega-prodcard" href={p.href} key={p.slug} onClick={go}>
+                        {/* The picture is decorative: the name and the line
+                            under it say the same thing to a screen reader. */}
+                        <span className="mpc-shot">
+                          {art && productsSeen ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={art.src} alt="" width={art.width} height={art.height} loading="lazy" decoding="async" />
+                          ) : art ? null : (
+                            <span className="mpc-initial" style={{ background: p.bg, color: p.fg }} aria-hidden="true">
+                              {p.initial}
+                            </span>
+                          )}
                         </span>
-                        <span>
-                          <b>{p.title}</b>
-                          <small>{pl.tagline}</small>
+                        <span className="mpc-body">
+                          <span className="plogo" style={{ background: p.bg, color: p.fg }}>
+                            {p.initial}
+                          </span>
+                          <span>
+                            <b>{p.title}</b>
+                            <small>{pl.tagline}</small>
+                          </span>
                         </span>
                       </Link>
                     );

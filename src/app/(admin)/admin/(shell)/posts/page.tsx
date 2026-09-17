@@ -10,7 +10,6 @@ import { DataTable, TableFilters, type Column } from "@/app/(admin)/_components/
 import { Icon } from "@/app/(admin)/_components/ui/Icon";
 import { parseTableParams } from "@/app/(admin)/_lib/table";
 import { getCsrfToken, requirePageUser } from "@/lib/auth/current";
-import { can } from "@/lib/auth/rbac";
 
 export const metadata: Metadata = { title: "Posts" };
 
@@ -39,8 +38,8 @@ function fmt(d: Date | null): string {
 }
 
 export default async function PostsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
-  const { user } = await requirePageUser("/admin/posts", { permission: "content:read" });
-  const canWrite = can(user.role, "content:write");
+  const { allows } = await requirePageUser("/admin/posts", { permission: "content:read" });
+  const canWrite = allows("content:write");
   const csrf = await getCsrfToken();
   const params = parseTableParams(await searchParams, TABLE);
   const clauses: SQL[] = [];

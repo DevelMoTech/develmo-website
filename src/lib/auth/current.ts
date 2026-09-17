@@ -4,8 +4,9 @@ import { redirect } from "next/navigation";
 import { getClientIp, hashIp } from "./ip";
 import { DatabaseUnavailableError, isDatabaseUnavailable } from "@/db/errors";
 import { CSRF_COOKIE, SESSION_COOKIE, loadSession, type SessionWithUser } from "./session";
-import { can, type Permission } from "./rbac";
+import type { Permission } from "./rbac";
 import { getMfaPolicy, mustEnrol, stillPending } from "./policy";
+import { allowsFor, type Allows } from "./role-access";
 
 // Session for the current request, deduplicated per render. An unreachable
 // database is reported as such rather than as a raw query failure, so a page
@@ -55,6 +56,11 @@ export function loginRedirect(path: string): never {
 // Page gate. Every admin page calls this first with its own path. It enforces,
 // in order: signed in, MFA challenge completed, forced password change done,
 // mandatory MFA enrolled, then the page's permission.
+//
+// It also hands back `allows`, the role's permissions as the console is
+// configured right now (Security, Roles and access). Pages use it to decide
+// which controls to render, so what a page offers and what its API will
+// accept are answered from the same place.
 export async function requirePageUser(
   path: string,
   opts: {
@@ -63,7 +69,7 @@ export async function requirePageUser(
     allowMustChangePassword?: boolean;
     allowMfaUnenrolled?: boolean;
   } = {},
-): Promise<SessionWithUser> {
+): Promise<SessionWithUser & { allows: Allows }> {
   let auth: SessionWithUser | null;
   try {
     auth = await getCurrentSession();
@@ -89,8 +95,9 @@ export async function requirePageUser(
       redirect("/admin/mfa/enrol");
     }
   }
-  if (opts.permission && !can(user.role, opts.permission)) {
+  const allows = await allowsFor(user.role);
+  if (opts.permission && !allows(opts.permission)) {
     redirect(`/admin?denied=${encodeURIComponent(opts.permission)}`);
   }
-  return auth;
+  return { ...auth, allows };
 }
