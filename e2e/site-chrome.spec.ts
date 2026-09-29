@@ -69,6 +69,33 @@ test("CrowdIQ Business is 99 a month, with 199 struck through", async ({ page })
   await expect(plan.locator(".was")).toHaveCSS("text-decoration-line", "line-through");
 });
 
+test("the use cases section offers the catalogue, and the file really downloads", async ({ page, request }) => {
+  await page.goto("/our-products/crowdiq");
+  const section = page.locator("section", { hasText: "Where CrowdIQ delivers" }).last();
+  const link = section.getByRole("link", { name: "View More Details" });
+  await expect(link).toBeVisible();
+  await expect(link).toHaveAttribute("href", "/crowdiq/develmo-crowdiq-catalog.pdf");
+  // A saved file, not a navigation, and under a name that means something in
+  // somebody's downloads folder.
+  await expect(link).toHaveAttribute("download", "DevelMo-CrowdIQ-Catalog.pdf");
+  await expect(section.getByText("The full CrowdIQ catalogue, as a PDF")).toBeVisible();
+  const box = (await link.boundingBox())!;
+  expect(box.height, "a real tap target").toBeGreaterThanOrEqual(44);
+
+  // The file behind it is served, and is a PDF rather than a 404 page.
+  const res = await request.get("/crowdiq/develmo-crowdiq-catalog.pdf");
+  expect(res.status()).toBe(200);
+  expect(res.headers()["content-type"]).toContain("pdf");
+  const body = await res.body();
+  expect(body.subarray(0, 5).toString()).toBe("%PDF-");
+  expect(body.byteLength, "the whole catalogue, not a truncated copy").toBeGreaterThan(1_000_000);
+
+  // Clicking it saves the file rather than leaving the page.
+  const [download] = await Promise.all([page.waitForEvent("download"), link.click()]);
+  expect(download.suggestedFilename()).toBe("DevelMo-CrowdIQ-Catalog.pdf");
+  expect(page.url()).toContain("/our-products/crowdiq");
+});
+
 test("the footer has no Who We Help column and still lists the rest", async ({ page }) => {
   await page.goto("/");
   const footer = page.locator("footer.footer");

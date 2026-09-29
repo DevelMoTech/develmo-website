@@ -2,6 +2,8 @@
 // Machine-generated with native critic review; further native review recommended before relying on ar/ur.
 export const extraMessages: Record<string, Record<string, string>> = {
   "ar": {
+    "View More Details": "عرض مزيد من التفاصيل",
+    "The full CrowdIQ catalogue, as a PDF": "كتيّب CrowdIQ الكامل بصيغة PDF",
     "See beyond the crowd": "انظر إلى ما وراء الزحام",
     "Turn existing cameras into AI business intelligence, visitor detection, tracking IDs, dwell time and heatmaps, in real time.": "حوّل الكاميرات الحالية إلى ذكاء أعمال مدعوم بالذكاء الاصطناعي: كشف الزوار ومعرّفات التتبع وزمن المكوث والخرائط الحرارية، آنيًا.",
     "Movement tracking, rally insights and performance metrics for players, teams and leagues, powering the Riyadh Padel Federation.": "تتبّع الحركة وتحليلات التبادلات ومؤشرات الأداء للاعبين والفرق والدوريات، وهي تشغّل اتحاد الرياض للبادل.",
@@ -377,6 +379,8 @@ export const extraMessages: Record<string, Record<string, string>> = {
     "/month": "/شهرياً"
   },
   "ur": {
+    "View More Details": "مزید تفصیلات دیکھیں",
+    "The full CrowdIQ catalogue, as a PDF": "CrowdIQ کا مکمل کیٹلاگ، PDF میں",
     "See beyond the crowd": "ہجوم سے آگے دیکھیں",
     "Turn existing cameras into AI business intelligence, visitor detection, tracking IDs, dwell time and heatmaps, in real time.": "موجودہ کیمروں کو اے آئی بزنس انٹیلیجنس میں بدلیں: وزیٹر کی شناخت، ٹریکنگ آئی ڈیز، ٹھہرنے کا دورانیہ اور ہیٹ میپس، حقیقی وقت میں۔",
     "Movement tracking, rally insights and performance metrics for players, teams and leagues, powering the Riyadh Padel Federation.": "کھلاڑیوں، ٹیموں اور لیگز کے لیے حرکت کی ٹریکنگ، ریلی تجزیات اور کارکردگی کے اعداد و شمار، جو ریاض پیڈل فیڈریشن کو چلاتے ہیں۔",
@@ -752,6 +756,8 @@ export const extraMessages: Record<string, Record<string, string>> = {
     "/month": "/ماہانہ"
   },
   "fr": {
+    "View More Details": "Voir plus de détails",
+    "The full CrowdIQ catalogue, as a PDF": "Le catalogue CrowdIQ complet, en PDF",
     "See beyond the crowd": "Voir au-delà de la foule",
     "Turn existing cameras into AI business intelligence, visitor detection, tracking IDs, dwell time and heatmaps, in real time.": "Transformez vos caméras existantes en intelligence d'affaires par IA : détection des visiteurs, identifiants de suivi, temps de présence et cartes de chaleur, en temps réel.",
     "Movement tracking, rally insights and performance metrics for players, teams and leagues, powering the Riyadh Padel Federation.": "Suivi des déplacements, analyses des échanges et indicateurs de performance pour les joueurs, les équipes et les ligues, au service de la Fédération de padel de Riyad.",
@@ -1127,6 +1133,8 @@ export const extraMessages: Record<string, Record<string, string>> = {
     "/month": "/mois"
   },
   "es": {
+    "View More Details": "Ver más detalles",
+    "The full CrowdIQ catalogue, as a PDF": "El catálogo completo de CrowdIQ, en PDF",
     "See beyond the crowd": "Ve más allá de la multitud",
     "Turn existing cameras into AI business intelligence, visitor detection, tracking IDs, dwell time and heatmaps, in real time.": "Convierte tus cámaras existentes en inteligencia de negocio con IA: detección de visitantes, identificadores de seguimiento, tiempo de permanencia y mapas de calor, en tiempo real.",
     "Movement tracking, rally insights and performance metrics for players, teams and leagues, powering the Riyadh Padel Federation.": "Seguimiento de movimientos, análisis de intercambios y métricas de rendimiento para jugadores, equipos y ligas, al servicio de la Federación de Pádel de Riad.",

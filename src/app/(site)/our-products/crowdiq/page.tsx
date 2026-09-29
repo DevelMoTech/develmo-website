@@ -35,6 +35,13 @@ const steps = [
   { n: "05", t: "Export & act", d: "Export CSV reports and feed decisions." },
 ];
 
+// The product catalogue, offered at the end of the use cases. Saved under a
+// friendly name rather than the one the file happens to have on disk.
+const CATALOGUE = {
+  href: "/crowdiq/develmo-crowdiq-catalog.pdf",
+  filename: "DevelMo-CrowdIQ-Catalog.pdf",
+};
+
 const useCases = [
   { t: "Retail stores", d: "Footfall, dwell and conversion by zone." },
   { t: "Shopping malls", d: "Tenant traffic and common-area flow." },
@@ -191,6 +198,15 @@ export default async function CrowdIQPage() {
                 <p>{tr(u.d)}</p>
               </div>
             ))}
+          </div>
+          {/* The catalogue covers each of these in depth. It downloads rather
+              than opening, and the label beside it says what the file is, so
+              nobody is surprised by a 5 MB save. */}
+          <div className="solutions-foot">
+            <span className="mono-label">{tr("The full CrowdIQ catalogue, as a PDF")}</span>
+            <Button href={CATALOGUE.href} download={CATALOGUE.filename} variant="navy" lg>
+              {tr("View More Details")}
+            </Button>
           </div>
         </div>
       </section>

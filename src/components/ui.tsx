@@ -8,12 +8,17 @@ export function Button({
   variant = "navy",
   lg,
   rect,
+  download,
   children,
 }: {
   href: string;
   variant?: Variant;
   lg?: boolean;
   rect?: boolean;
+  // A file to save rather than a page to open, and the name to save it under.
+  // It renders a plain anchor: the router has no business prefetching a file
+  // or intercepting the click that downloads it.
+  download?: string;
   children: ReactNode;
 }) {
   const cls = [
@@ -24,6 +29,14 @@ export function Button({
   ]
     .filter(Boolean)
     .join(" ");
+
+  if (download !== undefined) {
+    return (
+      <a href={href} className={cls} download={download}>
+        {children}
+      </a>
+    );
+  }
 
   const external = href.startsWith("http") || href.startsWith("mailto:") || href.startsWith("#");
   if (external) {
