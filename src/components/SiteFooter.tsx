@@ -16,6 +16,7 @@ const whatWeDo = [
 const company = [
   { label: "Who We Are", href: "/who-we-are" },
   { label: "About DevelMo", href: "/who-we-are/about-develmo" },
+  { label: "Advisory Board", href: "/who-we-are/advisory-board" },
   { label: "Careers", href: "/jobs" },
   { label: "Insights", href: "/our-blogs" },
   { label: "Knowledge Base", href: "/our-knowledge-base" },

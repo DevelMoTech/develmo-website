@@ -9,10 +9,13 @@ import { pageMeta } from "@/lib/meta";
 import { faqSchemaEnabled } from "@/lib/seo/overrides";
 import { jsonLd } from "@/lib/jsonld";
 
-// CrowdIQ has its own dedicated route; the rest render from this template.
+// Products with a page of their own. The rest render from this template, so
+// a product added in the content console still gets a page without code.
+const BESPOKE = new Set(["crowdiq", "padeliq", "develmo-gpt", "ai-voice-agent"]);
+
 export async function generateStaticParams() {
   const products = await getProducts();
-  return products.filter((p) => p.slug !== "crowdiq").map((p) => ({ slug: p.slug }));
+  return products.filter((p) => !BESPOKE.has(p.slug)).map((p) => ({ slug: p.slug }));
 }
 
 export async function generateMetadata({
@@ -55,7 +58,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           {p.intro && <p className="lead">{p.intro}</p>}
 
           {p.stats && (
-            <div className="kpis" style={{ marginTop: 28, gridTemplateColumns: `repeat(${p.stats.length},1fr)` }}>
+            <div className="kpis" style={{ marginTop: 28 }}>
               {p.stats.map((s) => {
                 const [value, ...rest] = s.split(" ");
                 return (

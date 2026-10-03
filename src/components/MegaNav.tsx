@@ -24,6 +24,7 @@ type TopKey = "what-we-do" | "who-we-help" | "our-products" | "who-we-are";
 const companyLinks = [
   { label: "Who We Are", href: "/who-we-are" },
   { label: "About DevelMo", href: "/who-we-are/about-develmo" },
+  { label: "Advisory Board", href: "/who-we-are/advisory-board" },
   { label: "Careers", href: "/jobs" },
   { label: "Knowledge Base", href: "/our-knowledge-base" },
   { label: "Insights", href: "/our-blogs" },
@@ -326,6 +327,10 @@ export function MegaNav({ locale }: { locale: string }) {
                         {/* The picture is decorative: the name and the line
                             under it say the same thing to a screen reader. */}
                         <span className="mpc-shot">
+                          {/* The hub says Live or Coming soon on every card.
+                              Without it here, the menu invites a click on a
+                              product that is not shipped yet. */}
+                          {p.badge === "soon" ? <span className="mpc-soon">{tr("Coming soon")}</span> : null}
                           {art && productsSeen ? (
                             // eslint-disable-next-line @next/next/no-img-element
                             <img src={art.src} alt="" width={art.width} height={art.height} loading="lazy" decoding="async" />

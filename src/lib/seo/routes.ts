@@ -33,6 +33,7 @@ export const STATIC_ROUTES: { path: string; label: string; inSitemap: boolean }[
   { path: "/our-products/crowdiq", label: "CrowdIQ", inSitemap: true },
   { path: "/who-we-are", label: "Who We Are", inSitemap: true },
   { path: "/who-we-are/about-develmo", label: "About DevelMo", inSitemap: true },
+  { path: "/who-we-are/advisory-board", label: "Company Advisory Board", inSitemap: true },
   { path: "/our-knowledge-base", label: "Knowledge Base", inSitemap: true },
   { path: "/our-blogs", label: "Our Blogs", inSitemap: true },
   { path: "/jobs", label: "Careers", inSitemap: true },

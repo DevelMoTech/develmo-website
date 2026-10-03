@@ -63,6 +63,11 @@ const nextConfig: NextConfig = {
   // it rewrites while the build is reading them. tsconfig.build.json is this
   // config with those files left out. An ordinary build is untouched.
   ...(process.env.NEXT_DIST_DIR ? { typescript: { tsconfigPath: "tsconfig.build.json" } } : {}),
+  // A self-hosted deploy needs the server, and only the node_modules it
+  // actually reaches, collected into one directory it can be started from.
+  // Vercel builds its own bundle and must not be given this, so it is opt in:
+  // `npm run build:selfhost` sets NEXT_STANDALONE and assembles the result.
+  ...(process.env.NEXT_STANDALONE ? { output: "standalone" as const } : {}),
   poweredByHeader: false,
   // Every page resolves its metadata from the SEO overrides cache (Phase 7).
   // Next streams metadata into <body> for browsers when generateMetadata is
@@ -77,6 +82,13 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     "/api/cron/publish": ["./package-lock.json"],
     "/api/admin/security/dependencies/scan": ["./package-lock.json"],
+  },
+  // ./.data is where uploads are written when BLOB_READ_WRITE_TOKEN is unset:
+  // applicants' CVs and console media. The tracer would otherwise sweep it
+  // into a standalone build, so a deploy bundle would carry real people's
+  // files to a new host. It is runtime state, never part of the build.
+  outputFileTracingExcludes: {
+    "**/*": ["./.data/**", "./deploy/**", "./.scratch/**", "./test-results/**", "./e2e/**"],
   },
   async headers() {
     return [

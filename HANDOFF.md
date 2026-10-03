@@ -34,7 +34,7 @@ to the owner to deploy. Today's task: <describe task>.
 
 DevelMo is a UK-registered AI / computer-vision software company (offices UK, Australia, Saudi Arabia, Pakistan; clients in 23+ countries). This site is its **marketing + lead-generation** website — the primary conversion goal is **"Book a Free Consultation"** (contact form enquiries).
 
-- **Products** (real, shipped): **CrowdIQ** (live AI video analytics, the flagship) and **PadelIQ** (sports/padel analytics). **OmniRoad 2.0 was withdrawn** and is gone from the code, the copy, the four locales and the product list; `/our-products/omni-road` 301s to `/our-products` (both `next.config.ts` and `src/lib/seo/static-redirects.ts`), and `src/lib/repo/products.ts` filters the slug so a stale `content_entries` row in any environment cannot bring it back.
+- **Products** (4): **CrowdIQ** (live AI video analytics, the flagship) and **PadelIQ** (padel and sports analytics) are shipped and live. **DevelMoGPT** (a private AI assistant that runs inside the customer network, no data leaves it) and the **AI Voice Agent** (a phone agent that books, reschedules and answers from the business systems) are built and badged **Coming soon**: no price is set for either, so both close on a demo booking, not a quote. The order is fixed everywhere (mega menu, hub, footer): CrowdIQ, PadelIQ, DevelMoGPT, AI Voice Agent. **OmniRoad 2.0 was withdrawn** and is gone from the code, the copy, the four locales and the product list; `/our-products/omni-road` 301s to `/our-products` (both `next.config.ts` and `src/lib/seo/static-redirects.ts`), and `src/lib/repo/products.ts` filters the slug so a stale `content_entries` row in any environment cannot bring it back.
 - **6 service pillars / 21 services**, **10 industries**, blog/knowledge-base, careers, legal pages.
 - HQ: 20 Wenlock Road, London N1 7GU. Contact: `info@develmo.com`.
 - This was a migration from a developer-dependent WordPress site to a modern, CMS-ready platform. The original site's URL structure was mirrored on matching slugs so SEO migration needs ~no redirects.
@@ -77,8 +77,10 @@ develmo-web/
    │  ├─ page.tsx          # homepage (hero → clients → products → solutions → industries → why)
    │  ├─ what-we-do/…      # pillar hub + [slug] service detail
    │  ├─ who-we-help/…     # industries hub + [slug] industry detail
-   │  ├─ our-products/…    # products hub + [slug] + crowdiq/ (bespoke flagship page)
-   │  ├─ who-we-are/…      # about hub + about-develmo
+   │  ├─ our-products/…    # hub + [slug] generic page + 4 bespoke pages (crowdiq/, padeliq/,
+   │  │                    #   develmo-gpt/, ai-voice-agent/). The BESPOKE set in [slug]/page.tsx
+   │  │                    #   removes them from generateStaticParams, or both would claim the route
+   │  ├─ who-we-are/…      # about hub + about-develmo + advisory-board
    │  ├─ our-blogs/…       # blog list + [slug] post
    │  ├─ our-knowledge-base/, jobs/, case-studies/, contact-develmo/
    │  ├─ privacy/, terms/, cookies/, not-found.tsx
@@ -89,8 +91,13 @@ develmo-web/
       ├─ site.ts           # company facts, nav, social, offices, stats, tech
       ├─ services.ts       # 6 pillars + 21 services (+ helpers)
       ├─ industries.ts     # 10 industries
-      ├─ products.ts       # 3 products
+      ├─ products.ts       # 4 products. Array order IS the site order. A product added or
+      │                    #   edited here stays invisible until `npm run content:sync-products`
       ├─ about.ts          # who-we-are + about-develmo content
+      ├─ advisory.ts       # the Company Advisory Board: 4 pillars + 2 members. Typed only,
+      │                    #   no content_entries entity and no console editor, so a change
+      │                    #   here needs a deploy. `linkedin` is empty until the owner
+      │                    #   supplies each URL, and the page hides the link while it is
       ├─ posts.ts          # 3 blog posts (bodies are English-only content)
       ├─ contact-schema.ts # zod schema for the form
       ├─ meta.ts           # pageMeta() — per-page OG/Twitter/canonical
@@ -177,6 +184,12 @@ Official palette (from DevelMo branding): main blue **`#0fb2f2`**, ink/dark **`#
 - Motifs: teal corner-brackets / CV bbox corner-ticks (`.bbox-frame`), mono "code-comment" labels (`// FEATURED`, `// LET'S BUILD`, `GLOBAL DELIVERY · LHR / SYD / RUH / KHI`) — these stay **English by design** (decorative), do not translate them.
 - Headings Raleway, body Hanken Grotesk. One dominant CTA repeated everywhere: **"Book a Free Consultation."**
 
+**Shared page primitives** (in `globals.css`, use these instead of inventing a layout per page):
+- `.spec-wrap` + `.spec` — a two or three column facts table (metric / unit / meaning). Below 700px each row stacks and the header is read from `data-label` on every `<td>`, so **a new column needs a matching `data-label`** or the phone layout loses its heading.
+- `.flow` + `.flow-step` — a numbered chain of steps, colour alternating ink navy and teal. Any number of steps; it wraps.
+- `.kpi-card`, `.outcome`, `.feat-light`, `.callout` — hero metric, outcome card, feature tile, and the boxed "where this actually is today" note. `.callout` is how a not-yet-shipped capability is stated honestly rather than dropped.
+All four product pages are built from these, so a change to one is a change to all four: check every page, not just the one you are on.
+
 ### 5.6 Key components
 - **MegaNav** (`"use client"`, takes `locale`): full-width mega-menu (What We Do / Who We Help / Our Products / Who We Are panels) + Insights, utility strip (email, Knowledge Base, ThemeToggle, **Languages** switcher), mobile drawer, hamburger.
 - **MegaNav** (`"use client"`) is the only site header; `SiteHeader.tsx` is
@@ -218,6 +231,7 @@ This session continued a long build. In chronological arc:
 - **`next/image` was avoided** — the logo collapsed to `width:0` inside flex containers. Plain `<img>` (with `eslint-disable @next/next/no-img-element`) is used deliberately. If migrating to `next/image`, set explicit `width`/`height` or `sizes` (§9.4).
 - **Async server components:** wrapping strings often means converting a page to `async` and adding `const locale = await getLocale()`. Client components (`"use client"`) can't be async — pass `locale` as a prop instead.
 - **YouTube background video** needs `youtube-nocookie` in the CSP `frame-src`.
+- **The repo is `"type": "module"`.** Node warned on every `npm run build`, because the postbuild stats script imports `src/lib/perf/bundle.ts` and Node had to reparse it as ESM. Declaring the type removes the warning and the reparse. It was safe because the repo has no `.js` or `.cjs` files at all, only `.mjs`, `.mts` and `.ts`, and Next guards its own CommonJS output with a `{"type":"commonjs"}` in `.next/`. Two consequences: a throwaway `node -e` one liner can no longer call `require()` without `--input-type=commonjs`, and **Next now emits `server.js` in a standalone build as ESM**, so `scripts/build-selfhost.mjs` copies the root `type` into the bundle's `package.json` rather than assuming CommonJS. Hardcoding it there killed the bundle on its first line, which only running the bundle caught.
 
 ---
 
@@ -227,6 +241,9 @@ This session continued a long build. In chronological arc:
 - **Blog article bodies + post titles/excerpts stay English** (content, not chrome). Only blog *chrome* is localised.
 - **Metadata (`<title>`/descriptions) stay English** (static, crawler-facing).
 - **Native ar/ur review recommended** — translations are machine-generated + AI-critic-reviewed, not human-verified.
+- **The padel footage is a copyright risk, and it is on the homepage.** The PadelIQ demo clips, **including the homepage hero video**, are TV broadcast footage of a professional tournament, not DevelMo material. The owner flagged this in the September 2026 product brief: it should be replaced with DevelMo’s own Riyadh Padel Federation league footage before any campaign drives traffic here. Nothing in the code can detect this, so it stays a standing item until the files in `public/` are swapped.
+- **Two products carry no price.** DevelMoGPT and the AI Voice Agent are deliberately quoted nowhere: their pages close on a demo or discovery call. An e2e test asserts no `$` figure appears on either page, so adding pricing means updating `e2e/site-products.spec.ts` on purpose rather than by accident.
+- **What the product pages may not claim** is a written constraint, not a style preference, and `e2e/site-products.spec.ts` enforces it. PadelIQ: no reaction time, rally patterns, shot type detection, ball speed, accuracy percentage, or live processing of club camera streams; ball tracking is “in development”, never a feature. DevelMoGPT: no security certification or compliance claim (SOC 2, ISO 27001, HIPAA, GDPR certified), no “self learning” or “remembers what you tell it”, no named client, no “production ready”, and **no link to the GitHub repository**. If the owner wants any of these said, get it in writing first, then change the test.
 - **FormSubmit activation pending** — the **first real** contact submission triggers a one-time activation email to `s.shahzeb8874@gmail.com`; someone must click it once to enable delivery. (Or set the SMTP variables, or `RESEND_API_KEY`, for production email; RUNBOOK §10 has the Gmail steps.)
 - **Sanity CMS not yet connected** — content is Sanity-shaped but still lives in `src/lib` (§9.4). This was the original core goal (remove the developer bottleneck).
 - **Rate limit is in-memory** (per serverless instance) — not robust across instances (§9.2).
@@ -286,7 +303,7 @@ For any change that touches pages, components, i18n, config, or content:
 
 1. **`npm run build`** — must be green (this typechecks + statically analyses all 57 routes).
 2. **e2e** — `npm run build && npx next start -p 3010 & && E2E_BASE_URL=http://localhost:3010 npx playwright test` → **28/28** (add tests when you add behaviour).
-3. **If you touched i18n:** run a **locale leak-check** — fetch the affected pages with `Cookie: locale=ar` and `locale=fr`, strip `<head>` + `<script>`, and assert the English strings you localised are **gone** (and RTL/`lang` correct for `ar`). Zero residual English on non-`en`.
+3. **If you touched i18n:** run **`npm run i18n:leaks`** against the running build (`BASE=http://localhost:3010`, `LOCALE=ar` for the RTL pass, routes as arguments without a leading slash). It renders each page in English and in the other language and reports every text segment that did not change, plus a wrong `lang` or `dir`. Zero residual English on non-`en`, apart from the names in its `KEEP` list. **Do not trust a grep for `tr("...")`**: it misses strings held in const arrays and passed to `PageHero`/`CtaBand`, which is exactly how a page ships half translated (Appendix C).
 4. **If you touched security/headers:** re-check `securityheaders.com` + confirm the theme toggle, JSON-LD, and contact form still work.
 5. **If you touched responsiveness:** verify across the §9.1 matrix (LTR + RTL, light + dark).
 6. Only then hand the change back to the DevelMo owner to review and deploy. **Live site — hand back only what passes the checks above.**
@@ -462,7 +479,12 @@ codebase, deliberately.
 Five things the console changes on the live site, each proven end to end:
 
 1. **Content.** Services, industries, products and the about page render from
-   `content_entries` when present, from the typed files otherwise.
+   `content_entries` when present, from the typed files otherwise. The console
+   can edit an entry but cannot add or delete one, so a **new product written
+   in `src/lib/products.ts` is invisible on any database that already holds
+   product rows** until `npm run content:sync-products` pushes it in
+   (`-- --dry-run` first, `-- --overwrite` to replace rows edited in the
+   console). The reverse, retiring one, is `content:retire-omniroad`.
 2. **Posts and jobs.** `/our-blogs`, `/our-knowledge-base` and `/jobs` render
    database rows. A slug change writes a 301 into `redirects` automatically.
 3. **SEO.** Per-route metadata overrides, redirects, sitemap membership,
@@ -598,6 +620,19 @@ The complete list, with a comment on each, is `.env.example` at the repo root.
 5. Hero/CTA? pass plain English to PageHero/CtaBand — they translate centrally
 6. Verify: build + e2e + locale leak-check (strip <head> AND <script>)
 ```
+
+**Finding what you missed.** Grepping the source for `tr("...")` finds only the
+literal calls. Page content held in a const array (`const features = [...]`
+rendered as `{tr(f)}`), and English handed to `PageHero`/`CtaBand` as a prop,
+never match that grep, and `t()` silently falls back to English, so the page
+looks fine in review and ships half translated. The reliable check needs no
+grep at all: **fetch the page twice, once with `Cookie: locale=en` and once
+with `locale=fr`, strip head/script/style and tags, and keep every text
+segment that is byte identical in both.** Anything that survives a change of
+language never reached the dictionary. Subtract the same run over a page you
+did not touch to separate your gaps from the handful of site wide ones
+(the language names, "Skip to content", "Contact", "Pakistan", the email
+address). Run it again after translating: the list should come back empty.
 
 ---
 *Last updated: this handoff reflects the site as of the i18n-completeness + social + caching pass (commit `99c91e8`), live on develmo.com.*

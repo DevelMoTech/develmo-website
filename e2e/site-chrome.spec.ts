@@ -109,7 +109,9 @@ test("the footer has no Who We Help column and still lists the rest", async ({ p
 test("the products mega menu shows a picture per product, and only fetches them once opened", async ({ page }) => {
   // Only the CrowdIQ still is counted: PadelIQ reuses /hero-1.jpg, which the
   // page's own hero already loads as a poster, so the menu costs nothing for
-  // that one either way.
+  // that one either way. DevelMoGPT and the AI Voice Agent have no photograph
+  // yet and show a brand coloured initial instead, which costs no request at
+  // all.
   const shots: string[] = [];
   page.on("request", (r) => {
     if (new URL(r.url()).pathname === "/crowdiq/showcase.jpg") shots.push(r.url());
@@ -122,8 +124,9 @@ test("the products mega menu shows a picture per product, and only fetches them 
   const panel = page.locator(".mega-top", { hasText: "Our Products" }).locator(".mega-panel");
   await expect(panel).toBeVisible();
   const cards = panel.locator(".mega-prodcard");
-  await expect(cards).toHaveCount(2);
+  await expect(cards).toHaveCount(4);
   await expect(cards.locator(".mpc-shot img")).toHaveCount(2);
+  await expect(cards.locator(".mpc-initial")).toHaveCount(2);
   for (const card of await cards.all()) {
     const box = (await card.locator(".mpc-shot").boundingBox())!;
     expect(box.height, "the picture fills real space").toBeGreaterThan(80);
@@ -163,7 +166,7 @@ test("OmniRoad is gone from the site, and its old address redirects", async ({ p
   expect(res.headers()["location"]).toContain("/our-products");
 
   await page.goto("/our-products");
-  await expect(page.locator(".card.prod")).toHaveCount(2);
+  await expect(page.locator(".card.prod")).toHaveCount(4);
   for (const path of ["/", "/our-products", "/who-we-are/about-develmo"]) {
     await page.goto(path);
     await quiet(page);

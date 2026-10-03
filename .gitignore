@@ -16,6 +16,10 @@
 # next.js
 /.next/
 /.next-build/
+# the self-hosted bundle from scripts/build-selfhost.mjs
+/deploy/
+# the upload archive made from it
+/develmo-build*.zip
 /out/
 
 # production
