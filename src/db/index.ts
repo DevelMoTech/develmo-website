@@ -19,8 +19,18 @@ function createDb(): Db {
   if (process.env.DATABASE_DRIVER === "neon" || /\bneon\.tech\b/.test(url)) {
     return drizzleNeonHttp(neon(url), { schema }) as unknown as Db;
   }
+  const connectionUrl = new URL(url);
+  const ca = process.env.DATABASE_SSL_CA?.replace(/\\n/g, "\n");
+  if (ca) {
+    // pg gives URL SSL options precedence over ssl.ca; use the supplied CA
+    // with certificate and hostname verification for hosted Postgres.
+    for (const key of ["sslmode", "sslrootcert", "sslcert", "sslkey"]) {
+      connectionUrl.searchParams.delete(key);
+    }
+  }
   const pool = new Pool({
-    connectionString: url,
+    connectionString: connectionUrl.toString(),
+    ...(ca ? { ssl: { ca, rejectUnauthorized: true } } : {}),
     max: 5,
     // Fail fast: the public site falls back to the typed src/lib data on any
     // DB problem, so a hung connection must never hold a page render hostage.
