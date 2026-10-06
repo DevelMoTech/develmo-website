@@ -19,7 +19,7 @@ vi.mock("nodemailer", () => ({
   },
 }));
 
-const VARS = ["SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASS", "SMTP_FROM", "SMTP_SECURE", "RESEND_API_KEY"];
+const VARS = ["SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASS", "SMTP_FROM", "SMTP_SECURE", "SMTP_AUTH_METHOD", "GMAIL_OAUTH_CLIENT_ID", "GMAIL_OAUTH_CLIENT_SECRET", "GMAIL_OAUTH_REFRESH_TOKEN", "RESEND_API_KEY"];
 
 beforeEach(() => {
   vi.unstubAllEnvs();
@@ -60,7 +60,24 @@ describe("smtpConfig", () => {
     vi.stubEnv("SMTP_USER", "owner@gmail.com");
     expect(smtpConfig()).toBeNull();
     vi.stubEnv("SMTP_PASS", "secret");
-    expect(smtpConfig()).toEqual({ host: "smtp.gmail.com", port: 587, secure: false, user: "owner@gmail.com", pass: "secret", from: "DevelMo <owner@gmail.com>" });
+    expect(smtpConfig()).toEqual({ host: "smtp.gmail.com", port: 587, secure: false, user: "owner@gmail.com", from: "DevelMo <owner@gmail.com>", auth: { type: "password", pass: "secret" } });
+  });
+
+  it("uses Gmail OAuth when explicitly selected and all OAuth secrets are present", () => {
+    vi.stubEnv("SMTP_AUTH_METHOD", "gmail-oauth");
+    vi.stubEnv("SMTP_HOST", "smtp.gmail.com");
+    vi.stubEnv("SMTP_USER", "owner@gmail.com");
+    vi.stubEnv("GMAIL_OAUTH_CLIENT_ID", "client-id");
+    vi.stubEnv("GMAIL_OAUTH_CLIENT_SECRET", "client-secret");
+    vi.stubEnv("GMAIL_OAUTH_REFRESH_TOKEN", "refresh-token");
+    expect(smtpConfig()).toEqual({
+      host: "smtp.gmail.com",
+      port: 587,
+      secure: false,
+      user: "owner@gmail.com",
+      from: "DevelMo <owner@gmail.com>",
+      auth: { type: "gmail-oauth", clientId: "client-id", clientSecret: "client-secret", refreshToken: "refresh-token" },
+    });
   });
 
   it("treats port 465 as TLS from the first byte, and honours SMTP_SECURE and SMTP_FROM", () => {
@@ -79,20 +96,30 @@ describe("smtpConfig", () => {
 
 describe("smtpStatus", () => {
   it("lists what is still missing and never carries the password", () => {
-    expect(smtpStatus()).toEqual({ configured: false, missing: ["SMTP_HOST", "SMTP_USER", "SMTP_PASS"], host: null, port: 587, user: null, from: null, gmail: false });
+    expect(smtpStatus()).toEqual({ configured: false, missing: ["SMTP_HOST", "SMTP_USER", "SMTP_PASS"], host: null, port: 587, user: null, from: null, gmail: false, authMethod: "password", issue: null });
     vi.stubEnv("SMTP_HOST", "smtp.gmail.com");
     vi.stubEnv("SMTP_USER", "owner@gmail.com");
-    expect(smtpStatus()).toEqual({ configured: false, missing: ["SMTP_PASS"], host: "smtp.gmail.com", port: 587, user: "owner@gmail.com", from: "DevelMo <owner@gmail.com>", gmail: true });
+    expect(smtpStatus()).toEqual({ configured: false, missing: ["SMTP_PASS"], host: "smtp.gmail.com", port: 587, user: "owner@gmail.com", from: "DevelMo <owner@gmail.com>", gmail: true, authMethod: "password", issue: null });
     vi.stubEnv("SMTP_PASS", "app-password-value");
     const status = smtpStatus();
     expect(status.configured).toBe(true);
     expect(status.missing).toEqual([]);
     expect(JSON.stringify(status)).not.toContain("app-password-value");
   });
+
+  it("lists only missing OAuth values and never leaks OAuth secrets", () => {
+    vi.stubEnv("SMTP_AUTH_METHOD", "gmail-oauth");
+    vi.stubEnv("SMTP_HOST", "smtp.gmail.com");
+    vi.stubEnv("SMTP_USER", "owner@gmail.com");
+    vi.stubEnv("GMAIL_OAUTH_CLIENT_ID", "client-id");
+    const status = smtpStatus();
+    expect(status).toMatchObject({ configured: false, missing: ["GMAIL_OAUTH_CLIENT_SECRET", "GMAIL_OAUTH_REFRESH_TOKEN"], authMethod: "gmail-oauth", issue: null });
+    expect(JSON.stringify(status)).not.toContain("client-id");
+  });
 });
 
 describe("describeSmtpError", () => {
-  const cfg = { host: "smtp.gmail.com", port: 587, secure: false, user: "owner@gmail.com", pass: "x", from: "DevelMo <owner@gmail.com>" };
+  const cfg = { host: "smtp.gmail.com", port: 587, secure: false, user: "owner@gmail.com", from: "DevelMo <owner@gmail.com>", auth: { type: "password" as const, pass: "x" } };
 
   it("explains a refused login in Gmail terms when the host is Gmail", () => {
     const err = Object.assign(new Error("Invalid login: 535-5.7.8 Username and Password not accepted"), { code: "EAUTH", responseCode: 535 });
@@ -100,6 +127,13 @@ describe("describeSmtpError", () => {
       "SMTP login refused by smtp.gmail.com:587 (EAUTH 535). Gmail only accepts an app password here, which needs 2-Step Verification turned on for the account; the normal account password is refused",
     );
     expect(describeSmtpError(err, { ...cfg, host: "mail.example.com" })).toBe("SMTP login refused by mail.example.com:587 (EAUTH 535). Check SMTP_USER and SMTP_PASS");
+  });
+
+  it("explains an OAuth refusal without suggesting an app password", () => {
+    const err = Object.assign(new Error("Invalid login"), { code: "EAUTH", responseCode: 535 });
+    expect(describeSmtpError(err, { ...cfg, auth: { type: "gmail-oauth", clientId: "id", clientSecret: "secret", refreshToken: "token" } })).toBe(
+      "SMTP login refused by smtp.gmail.com:587 (EAUTH 535). Gmail OAuth was refused. Check the OAuth client, refresh token and that Gmail SMTP access is permitted",
+    );
   });
 
   it("points at the host and port when the connection never came up", () => {
@@ -126,6 +160,19 @@ describe("sendViaSmtp", () => {
     expect(mock.options).toMatchObject({ host: "smtp.gmail.com", port: 587, secure: false, requireTLS: true, auth: { user: "owner@gmail.com", pass: "abcdefghijklmnop" } });
     expect(mock.sendMail).toHaveBeenCalledWith({ from: "DevelMo <owner@gmail.com>", to: "admin@develmo.test", replyTo: "ada@lovelace.test", subject: "Hello", text: "Body" });
     expect(mock.close).toHaveBeenCalledTimes(1);
+  });
+
+  it("uses OAuth 2 when Gmail OAuth is configured", async () => {
+    vi.stubEnv("SMTP_AUTH_METHOD", "gmail-oauth");
+    vi.stubEnv("SMTP_HOST", "smtp.gmail.com");
+    vi.stubEnv("SMTP_USER", "owner@gmail.com");
+    vi.stubEnv("GMAIL_OAUTH_CLIENT_ID", "client-id");
+    vi.stubEnv("GMAIL_OAUTH_CLIENT_SECRET", "client-secret");
+    vi.stubEnv("GMAIL_OAUTH_REFRESH_TOKEN", "refresh-token");
+    await sendViaSmtp({ to: "admin@develmo.test", subject: "Hello", text: "Body" });
+    expect(mock.options).toMatchObject({
+      auth: { type: "OAuth2", user: "owner@gmail.com", clientId: "client-id", clientSecret: "client-secret", refreshToken: "refresh-token" },
+    });
   });
 
   it("wraps a failure in plain words, keeps the original as the cause, and still closes", async () => {

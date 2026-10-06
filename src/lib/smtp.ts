@@ -1,12 +1,14 @@
-// Outbound mail over SMTP with a username and password: a Gmail account with
-// an app password, or any mailbox provider. Configured entirely from the
-// environment (SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM) and
-// used by every path that sends mail, after Resend and before the webhook.
+// Outbound mail over SMTP with a username and password, or Gmail OAuth 2.
+// Configured entirely from the environment and used by every path that sends
+// mail, after Resend and before the webhook.
 // The config reader never throws; a missing piece means "not configured" and
 // the settings page says which piece. Sending throws, with a message that
 // says what to fix, and the delivery chains record that message.
 
-export type SmtpConfig = { host: string; port: number; secure: boolean; user: string; pass: string; from: string };
+export type SmtpAuth =
+  | { type: "password"; pass: string }
+  | { type: "gmail-oauth"; clientId: string; clientSecret: string; refreshToken: string };
+export type SmtpConfig = { host: string; port: number; secure: boolean; user: string; from: string; auth: SmtpAuth };
 export type SmtpMessage = { to: string; subject: string; text: string; replyTo?: string };
 export type SmtpStatus = {
   configured: boolean;
@@ -19,9 +21,12 @@ export type SmtpStatus = {
   // Gmail has rules of its own (app password, From rewritten to the
   // account), and the settings page spells them out when it applies.
   gmail: boolean;
+  authMethod: "password" | "gmail-oauth";
+  issue: string | null;
 };
 
-const REQUIRED = ["SMTP_HOST", "SMTP_USER", "SMTP_PASS"] as const;
+const PASSWORD_REQUIRED = ["SMTP_HOST", "SMTP_USER", "SMTP_PASS"] as const;
+const GMAIL_OAUTH_REQUIRED = ["SMTP_HOST", "SMTP_USER", "GMAIL_OAUTH_CLIENT_ID", "GMAIL_OAUTH_CLIENT_SECRET", "GMAIL_OAUTH_REFRESH_TOKEN"] as const;
 const DEFAULT_PORT = 587;
 const CONNECT_TIMEOUT_MS = 8000;
 const SOCKET_TIMEOUT_MS = 15000;
@@ -51,27 +56,65 @@ function readEnv() {
   // upgrades with STARTTLS, which sendViaSmtp makes mandatory.
   const secure = secureVar ? secureVar === "true" || secureVar === "1" : port === 465;
   const from = env("SMTP_FROM") || (user ? `DevelMo <${user}>` : "");
-  return { host, user, pass, port, secure, from };
+  const authMethodRaw = env("SMTP_AUTH_METHOD").toLowerCase();
+  const authMethod: "password" | "gmail-oauth" = authMethodRaw === "gmail-oauth" ? "gmail-oauth" : "password";
+  return {
+    host,
+    user,
+    pass,
+    port,
+    secure,
+    from,
+    authMethod,
+    authMethodRaw,
+    clientId: env("GMAIL_OAUTH_CLIENT_ID"),
+    clientSecret: env("GMAIL_OAUTH_CLIENT_SECRET"),
+    refreshToken: env("GMAIL_OAUTH_REFRESH_TOKEN"),
+  };
+}
+
+function resolveConfig(): { config: SmtpConfig | null; missing: string[]; authMethod: "password" | "gmail-oauth"; issue: string | null } {
+  const e = readEnv();
+  const issue = e.authMethodRaw && e.authMethodRaw !== "password" && e.authMethodRaw !== "gmail-oauth"
+    ? "SMTP_AUTH_METHOD must be password or gmail-oauth"
+    : e.authMethod === "gmail-oauth" && e.host && !isGmailHost(e.host)
+      ? "Gmail OAuth requires SMTP_HOST=smtp.gmail.com"
+      : null;
+  const required = e.authMethod === "gmail-oauth" ? GMAIL_OAUTH_REQUIRED : PASSWORD_REQUIRED;
+  const missing = required.filter((name) => {
+    if (name === "SMTP_HOST") return !e.host;
+    if (name === "SMTP_USER") return !e.user;
+    if (name === "SMTP_PASS") return !e.pass;
+    if (name === "GMAIL_OAUTH_CLIENT_ID") return !e.clientId;
+    if (name === "GMAIL_OAUTH_CLIENT_SECRET") return !e.clientSecret;
+    return !e.refreshToken;
+  });
+  if (missing.length || issue) return { config: null, missing, authMethod: e.authMethod, issue };
+
+  const auth: SmtpAuth = e.authMethod === "gmail-oauth"
+    ? { type: "gmail-oauth", clientId: e.clientId, clientSecret: e.clientSecret, refreshToken: e.refreshToken }
+    : { type: "password", pass: e.pass };
+  return { config: { host: e.host, port: e.port, secure: e.secure, user: e.user, from: e.from, auth }, missing, authMethod: e.authMethod, issue };
 }
 
 export function smtpConfig(): SmtpConfig | null {
-  const e = readEnv();
-  if (!e.host || !e.user || !e.pass) return null;
-  return { host: e.host, port: e.port, secure: e.secure, user: e.user, pass: e.pass, from: e.from };
+  return resolveConfig().config;
 }
 
 // What the settings page shows. Never includes the password.
 export function smtpStatus(): SmtpStatus {
   const e = readEnv();
-  const missing = REQUIRED.filter((v) => !env(v));
+  const resolved = resolveConfig();
   return {
-    configured: missing.length === 0,
-    missing,
+    configured: !!resolved.config,
+    missing: resolved.missing,
     host: e.host || null,
     port: e.port,
     user: e.user || null,
     from: e.from || null,
     gmail: isGmailHost(e.host),
+    authMethod: resolved.authMethod,
+    issue: resolved.issue,
   };
 }
 
@@ -85,7 +128,9 @@ export function describeSmtpError(err: unknown, cfg: SmtpConfig): string {
   const where = `${cfg.host}:${cfg.port}`;
   const rc = e.responseCode ? ` ${e.responseCode}` : "";
   if (code === "EAUTH" || e.responseCode === 535 || e.responseCode === 534) {
-    const hint = isGmailHost(cfg.host)
+    const hint = cfg.auth.type === "gmail-oauth"
+      ? "Gmail OAuth was refused. Check the OAuth client, refresh token and that Gmail SMTP access is permitted"
+      : isGmailHost(cfg.host)
       ? "Gmail only accepts an app password here, which needs 2-Step Verification turned on for the account; the normal account password is refused"
       : "Check SMTP_USER and SMTP_PASS";
     return `SMTP login refused by ${where} (EAUTH${rc}). ${hint}`;
@@ -115,7 +160,9 @@ async function transportFor(cfg: SmtpConfig, connectTimeoutMs: number) {
     secure: cfg.secure,
     // Never send the password over a connection that did not upgrade.
     requireTLS: !cfg.secure,
-    auth: { user: cfg.user, pass: cfg.pass },
+    auth: cfg.auth.type === "gmail-oauth"
+      ? { type: "OAuth2", user: cfg.user, clientId: cfg.auth.clientId, clientSecret: cfg.auth.clientSecret, refreshToken: cfg.auth.refreshToken }
+      : { user: cfg.user, pass: cfg.auth.pass },
     connectionTimeout: connectTimeoutMs,
     greetingTimeout: connectTimeoutMs,
     socketTimeout: SOCKET_TIMEOUT_MS,

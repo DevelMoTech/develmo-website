@@ -57,11 +57,13 @@ export function EmailSettings({ csrf, notifyEmail, status, canWrite }: { csrf: s
                 </>
               ) : status.smtp.missing.length < 3 ? (
                 <>
-                  Still needed: <code>{status.smtp.missing.join(", ")}</code>.
-                  {status.smtp.gmail && " For Gmail, SMTP_PASS is a 16-letter app password from myaccount.google.com/apppasswords, which needs 2-Step Verification on the account. The runbook has the steps."}
+                  {status.smtp.issue ? <>{status.smtp.issue}. </> : null}
+                  {status.smtp.missing.length ? <>Still needed: <code>{status.smtp.missing.join(", ")}</code>.</> : null}
+                  {status.smtp.gmail && status.smtp.authMethod === "password" && " For Gmail password authentication, SMTP_PASS is a 16-letter app password from myaccount.google.com/apppasswords."}
+                  {status.smtp.authMethod === "gmail-oauth" && " Gmail OAuth needs a Google OAuth client ID, client secret, and refresh token. Those values stay on the server."}
                 </>
               ) : (
-                "SMTP_HOST, SMTP_USER and SMTP_PASS. A Gmail account with an app password works, as does any mailbox provider. The runbook has the steps."
+                "SMTP_HOST, SMTP_USER and SMTP_PASS. Or set SMTP_AUTH_METHOD to gmail-oauth and provide the Gmail OAuth server credentials."
               )}
             </div>
           </dd>
